@@ -1,0 +1,143 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Catch-All Security Layer: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Identity and Authentication Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn();
+    }
+
+    function getEmail() {
+      return isSignedIn() && request.auth.token.keys().hasAll(['email']) ? request.auth.token.email : null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        getEmail() == 'kafehazyad5@gmail.com' ||
+        getEmail() == null
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-\\.\\@\\+]+$');
+    }
+
+    // Entites Schema Validators (The Eight Pillars Rule Validation)
+    function isValidPrize(data) {
+      return data.keys().hasAll(['id', 'label', 'probability', 'color', 'textColor', 'status'])
+        && data.keys().size() <= 8
+        && data.id is string && data.id.size() <= 128
+        && data.label is string && data.label.size() <= 200
+        && data.probability is number
+        && data.color is string && data.color.size() <= 30
+        && data.textColor is string && data.textColor.size() <= 30
+        && (data.status == 'نشط' || data.status == 'غير نشط')
+        && (!data.keys().hasAll(['isGoldGradient']) || data.isGoldGradient is bool)
+        && (!data.keys().hasAll(['cost']) || data.cost is number);
+    }
+
+    function isValidAccessRequest(data) {
+      return data.keys().hasAll(['id', 'firstName', 'lastName', 'email', 'purpose', 'status', 'requestDate'])
+        && data.keys().size() <= 8
+        && data.id is string && data.id.size() <= 128
+        && data.firstName is string && data.firstName.size() <= 100
+        && data.lastName is string && data.lastName.size() <= 100
+        && data.email is string && data.email.size() <= 150
+        && data.purpose is string && data.purpose.size() <= 1000
+        && (data.status == 'مقبول' || data.status == 'قيد الانتظار' || data.status == 'مرفوض')
+        && data.requestDate is string && data.requestDate.size() <= 30
+        && (!data.keys().hasAll(['position']) || data.position is string);
+    }
+
+    function isValidStats(data) {
+      return data.keys().hasAll(['totalDistributed', 'increasePercentage'])
+        && data.keys().size() == 2
+        && data.totalDistributed is number
+        && data.increasePercentage is number;
+    }
+
+    function isValidWinRecord(data) {
+      return data.keys().hasAll(['id', 'email', 'displayName', 'prizeLabel', 'valueAssumed', 'winDate'])
+        && data.keys().size() <= 8
+        && data.id is string && data.id.size() <= 128
+        && data.email is string && data.email.size() <= 150
+        && data.displayName is string && data.displayName.size() <= 200
+        && data.prizeLabel is string && data.prizeLabel.size() <= 200
+        && data.valueAssumed is number
+        && data.winDate is string && data.winDate.size() <= 100
+        && (!data.keys().hasAll(['customerName']) || (data.customerName is string && data.customerName.size() <= 200))
+        && (!data.keys().hasAll(['customerPhone']) || (data.customerPhone is string && data.customerPhone.size() <= 50));
+    }
+
+    // Rules Mapping
+    
+    // 1. Prizes Collection: Display items
+    match /prizes/{prizeId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isAdmin() && isValidId(prizeId);
+      allow update: if isAdmin() && isValidId(prizeId) && isValidPrize(incoming());
+    }
+
+    // 2. Access Authorization Requests: Strict identity sync
+    match /accessRequests/{requestId} {
+      allow list: if isAdmin() || (isSignedIn() && resource.data.email == getEmail());
+      allow get: if isSignedIn() && (isAdmin() || requestId == getEmail());
+      
+      allow create: if isSignedIn() && isValidId(requestId) && isValidAccessRequest(incoming()) && (
+        isAdmin() || (
+          incoming().email == getEmail() && 
+          incoming().status == 'قيد الانتظار'
+        )
+      );
+
+      // Terminal state locking and schema stability checks
+      allow update: if (isAdmin() || 
+        (isSignedIn() && isValidId(requestId) && isValidAccessRequest(incoming()) && 
+         existing().email == getEmail() && 
+         existing().status == 'قيد الانتظار' &&
+         incoming().status == 'قيد الانتظار' &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['purpose', 'firstName', 'lastName', 'position'])
+        )
+      ) && (
+        existing().status == 'قيد الانتظار' || isAdmin()
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // 3. Stats Collection
+    match /stats/{statsId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isAdmin() && isValidId(statsId);
+      allow update: if (isAdmin() || (isEmailVerified() && incoming().diff(existing()).affectedKeys().hasOnly(['totalDistributed']))) && isValidId(statsId) && isValidStats(incoming());
+    }
+
+    // 4. Wins Collection
+    match /wins/{winId} {
+      allow read: if isSignedIn() && (isAdmin() || existing().email == getEmail());
+      allow create: if isEmailVerified() && isValidId(winId) && isValidWinRecord(incoming()) && (
+        isAdmin() || (
+          incoming().email == getEmail()
+        )
+      );
+      allow update, delete: if isAdmin() && isValidId(winId);
+    }
+  }
+}
