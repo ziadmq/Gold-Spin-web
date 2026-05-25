@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Prize, AccessRequest, WinRecord } from './types/types';
-import AuthPage from './screen/auth/AuthPage';
-import UserWheelPage from './screen/user/UserWheelPage';
-import AdminPortal from './screen/admin/AdminPortal';
-import { db, auth, OperationType, handleFirestoreError } from './services/firebase';
+import { Prize, AccessRequest, WinRecord } from '../types/types';
+import AuthPage from '../screen/auth/AuthPage';
+import UserWheelPage from '../screen/user/UserWheelPage';
+import AdminPortal from '../screen/admin/AdminPortal';
+import { db, auth, OperationType, handleFirestoreError } from '../services/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, query, where } from 'firebase/firestore';
 
