@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Gift, RefreshCw, Sparkles, User, Award, Check } from 'lucide-react';
-import { Prize } from '../types';
+import { Prize } from '../../types/types';
 
 interface UserWheelPageProps {
   prizes: Prize[];
@@ -16,7 +16,7 @@ export default function UserWheelPage({
   onLogout, 
   onRecordWin, 
   onAdminLoginClick,
-  userDisplayName = 'عضو كونسيرج مميز',
+  userDisplayName = 'عضو  مميز',
   userEmail = ''
 }: UserWheelPageProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -46,7 +46,6 @@ export default function UserWheelPage({
 
   const activePrizes = prizes.filter(p => p.status === 'نشط');
 
-  // Trigger drawing the wheel whenever list of active prizes changes
   useEffect(() => {
     drawWheel();
   }, [activePrizes]);
@@ -80,41 +79,34 @@ export default function UserWheelPage({
     activePrizes.forEach((prize, i) => {
       const angle = i * sliceAngle;
 
-      // Draw Slice Background
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
       ctx.arc(centerX, centerY, radius, angle, angle + sliceAngle);
       ctx.fillStyle = prize.color;
       ctx.fill();
 
-      // Outer golden border
       ctx.lineWidth = 1.5;
       ctx.strokeStyle = '#c5a059';
       ctx.stroke();
 
-      // Draw text
       ctx.save();
       ctx.translate(centerX, centerY);
       ctx.rotate(angle + sliceAngle / 2);
       ctx.textAlign = 'right';
       
-      // Use white for font color in spinner as requested by user
       ctx.fillStyle = '#ffffff';
       
-      // Add subtle canvas text shadow of high-contrast readability
       ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
       ctx.shadowBlur = 6;
       ctx.shadowOffsetX = 1.5;
       ctx.shadowOffsetY = 1.5;
 
-      // Clean, premium, larger system sans-serif font for gorgeous, distinct Arabic letters
       ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
       const labelToShow = prize.label.length > 18 ? prize.label.substring(0, 16) + '..' : prize.label;
       ctx.fillText(labelToShow, radius - 30, 6);
       ctx.restore();
     });
 
-    // Outer circle container border
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
     ctx.lineWidth = 6;
@@ -148,12 +140,9 @@ export default function UserWheelPage({
 
     setIsSpinning(true);
 
-    // Calculate dynamic win based on probability distribution!
-    // We filter out any prizes with 0% probability to ensure they are never selected.
     const spinPrizes = activePrizes.filter(p => p.probability > 0);
     const prizesToChooseFrom = spinPrizes.length > 0 ? spinPrizes : activePrizes;
 
-    // Calculate sum of probabilities of the active selection pool
     const totalSpinProb = prizesToChooseFrom.reduce((sum, p) => sum + p.probability, 0);
     const randomValue = Math.random() * (totalSpinProb || 100);
 
@@ -168,39 +157,28 @@ export default function UserWheelPage({
       }
     }
 
-    // Now find the index of the selected prize in the full activePrizes list for rotation alignment
     let selectedPrizeIndex = activePrizes.findIndex(p => p.id === selectedPrize.id);
     if (selectedPrizeIndex === -1) selectedPrizeIndex = 0;
 
     const prize = activePrizes[selectedPrizeIndex];
     setWinningPrize(prize);
 
-    // Find target angle in degrees for selected slice
-    // Pointer is at the top (-90 degrees / 270 degrees in canvas space)
-    // Canvas runs clockwise, so slice index starts at 0 (3 o'clock / 0 radians) and advances clockwise.
     const sliceDegWidth = 360 / activePrizes.length;
-    // Calculate mid-angle for slice
     const sliceMidDeg = (selectedPrizeIndex * sliceDegWidth) + (sliceDegWidth / 2);
-    // Determine degrees required to rotate so that sliceMidDeg points straight UP (270 degrees)
-    // formula: targetRotationOffset = (270 - sliceMidDeg + 360) % 360
     const targetOffset = (270 - sliceMidDeg + 360) % 360;
 
-    // Add 8 to 12 full rotations for a high-speed luxury feel
     const randomRotations = 360 * (6 + Math.floor(Math.random() * 4));
     const nextRotation = currentRotation + randomRotations + targetOffset - (currentRotation % 360);
 
     setCurrentRotation(nextRotation);
 
-    // Dynamic rotation wait time based on saved admin preferences
     const actualDurationMs = Math.round(spinDuration * 1000);
 
-    // Wait for transition completion
     setTimeout(() => {
       setIsSpinning(false);
       setShowWinModal(true);
       generateConfetti();
       
-      // Assumed money value or constant value or points for stats tracking
       let assumedValue = prize.cost ?? 50;
       if (prize.cost === undefined || prize.cost === null || prize.cost === 0) {
         if (prize.label.includes('$')) {

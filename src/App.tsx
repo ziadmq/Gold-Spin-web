@@ -1,36 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { Prize, AccessRequest, WinRecord } from './types';
-import AuthPage from './components/AuthPage';
-import UserWheelPage from './components/UserWheelPage';
-import AdminPortal from './components/AdminPortal';
-import { db, auth, OperationType, handleFirestoreError } from './firebase';
+import { Prize, AccessRequest, WinRecord } from './types/types';
+import AuthPage from './screen/auth/AuthPage';
+import UserWheelPage from './screen/user/UserWheelPage';
+import AdminPortal from './screen/admin/AdminPortal';
+import { db, auth, OperationType, handleFirestoreError } from './services/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, query, where } from 'firebase/firestore';
 
 const defaultPrizes: Prize[] = [
-  { id: '1', label: 'ساعة رولكس ديت جست', probability: 100.0, color: '#F4EBD0', textColor: '#775a19', status: 'نشط' },
+  { id: '1', label: 'item', probability: 100.0, color: '#F4EBD0', textColor: '#775a19', status: 'نشط' },
 ];
 
-const defaultRequests: AccessRequest[] = [
-  { id: 'req_1', firstName: 'فهد', lastName: 'القحطاني', email: 'fahad@luxe.com', purpose: 'الوصول لتجربة السفر وحجز الفنادق الفاخرة الموثقة الكونسيرج', status: 'قيد الانتظار', requestDate: '2026/05/20', position: 'المدير التنفيذي لشركة آفاق' },
-  { id: 'req_2', firstName: 'سارة', lastName: 'الشريف', email: 'sara@luxuryconcierge.com', purpose: 'مراجعة حساب الهدايا السنوي لنخبة كبار الشخصيات بمقر الرياض', status: 'مقبول', requestDate: '2026/05/18', position: 'عضو كبار شخصيات' },
-];
-
+const defaultRequests: AccessRequest[] = [];
 export default function App() {
   const [prizes, setPrizes] = useState<Prize[]>(defaultPrizes);
-  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
+  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>(defaultRequests);
   const [wins, setWins] = useState<WinRecord[]>([]);
   const [currentRole, setCurrentRole] = useState<'visitor' | 'admin' | 'user'>('visitor');
   const [totalDistributed, setTotalDistributed] = useState(0);
 
-  // Force sign out on initial layout load so it always opens on the login page for all users
   useEffect(() => {
-    localStorage.removeItem('bypass_email');
-    localStorage.removeItem('bypass_name');
-    signOut(auth).catch(err => console.error("Initial sign out failed:", err));
+    const unsubscribeInit = onAuthStateChanged(auth, (user) => {
+      unsubscribeInit();
+      if (user && !user.isAnonymous) {
+        return;
+      }
+      localStorage.removeItem('bypass_email');
+      localStorage.removeItem('bypass_name');
+      if (user) {
+        signOut(auth).catch(err => console.error("Initial sign out failed:", err));
+      }
+    });
   }, []);
 
-  // Sync state with Firestore in real-time
   useEffect(() => {
     let unsubPrizes: (() => void) | undefined;
     let unsubWins: (() => void) | undefined;
@@ -57,16 +59,13 @@ export default function App() {
     };
 
     const unsubscribeOuterAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      // Always cleanup previous session's snapshots immediately on auth trigger to prevent memory leaks and state overrides
       cleanupActiveSubscriptions();
 
       if (firebaseUser) {
-        // 1. Snapshot for Prizes
         unsubPrizes = onSnapshot(collection(db, 'prizes'), (snapshot) => {
           if (!snapshot.empty) {
             const list = snapshot.docs.map(changeDoc => changeDoc.data() as Prize);
             
-            // Auto prune old default prizes '2'-'8' if they exist in the database to align with user requirement
             const oldDefaultIds = ['2', '3', '4', '5', '6', '7', '8'];
             const hasOldPrizes = list.some(p => oldDefaultIds.includes(p.id));
             if (hasOldPrizes) {
@@ -81,9 +80,7 @@ export default function App() {
               });
             }
 
-            // Filter out pruned old default IDs
             const filteredList = list.filter(p => !oldDefaultIds.includes(p.id));
-            // Sort robustly by numeric values if possible, falling back to clean alphanumeric string comparison to avoid NaN-corruption
             filteredList.sort((a, b) => {
               const numA = Number(a.id);
               const numB = Number(b.id);
@@ -98,7 +95,6 @@ export default function App() {
             });
             setPrizes(filteredList);
           } else {
-            // First time database bootstrap
             defaultPrizes.forEach(async (p) => {
               try {
                 await setDoc(doc(db, 'prizes', p.id), p);
@@ -111,24 +107,20 @@ export default function App() {
           console.error("Error watching prizes:", error);
         });
 
-        // 2. Snapshot for Wins and Real Total computation
         const email = firebaseUser.email?.trim().toLowerCase() || localStorage.getItem('bypass_email') || '';
 
         if (email === 'kafehazyad5@gmail.com') {
-          // Admin watches all wins
           unsubWins = onSnapshot(collection(db, 'wins'), (snapshot) => {
             const list = snapshot.docs.map(changeDoc => changeDoc.data() as WinRecord);
             list.sort((a, b) => b.id.localeCompare(a.id));
             setWins(list);
             
-            // Compute real summation dynamically
             const calculatedSum = list.reduce((total, item) => total + (item.valueAssumed || 0), 0);
             setTotalDistributed(calculatedSum);
           }, (error) => {
             console.error("Error watching wins collection:", error);
           });
         } else if (email) {
-          // Regular user watches only their own wins to prevent "Missing or insufficient permissions"
           unsubWins = onSnapshot(query(collection(db, 'wins'), where('email', '==', email)), (snapshot) => {
             const list = snapshot.docs.map(changeDoc => changeDoc.data() as WinRecord);
             list.sort((a, b) => b.id.localeCompare(a.id));
@@ -137,7 +129,6 @@ export default function App() {
             console.error("Error watching personal wins:", error);
           });
 
-          // Regular user watches the global total stats document dynamically
           unsubStats = onSnapshot(doc(db, 'stats', 'dashboard'), (snap) => {
             if (snap.exists()) {
               setTotalDistributed(snap.data().totalDistributed || 0);
@@ -149,7 +140,6 @@ export default function App() {
 
         if (email === 'kafehazyad5@gmail.com') {
           setCurrentRole('admin');
-          // Admin watches all requests
           unsubRequests = onSnapshot(collection(db, 'accessRequests'), (snapshot) => {
             const list = snapshot.docs.map(changeDoc => changeDoc.data() as AccessRequest);
             setAccessRequests(list);
@@ -157,7 +147,6 @@ export default function App() {
             console.error("Error watching requests:", error);
           });
         } else {
-          // Regular user watches their own request
           if (email) {
             unsubRequests = onSnapshot(doc(db, 'accessRequests', email), (snap) => {
               if (snap.exists()) {
@@ -192,7 +181,6 @@ export default function App() {
     };
   }, []);
 
-  // centralized CRUD for Prizes
   const handleAddPrize = async (newPrize: Prize) => {
     try {
       await setDoc(doc(db, 'prizes', newPrize.id), newPrize);
@@ -203,7 +191,6 @@ export default function App() {
 
   const handleEditPrize = async (id: string, updatedFields: Partial<Prize>) => {
     try {
-      // Force status to remain 'نشط' if modifying the default prize
       const finalFields = id === '1' ? { ...updatedFields, status: 'نشط' as const } : updatedFields;
       await updateDoc(doc(db, 'prizes', id), finalFields);
     } catch (error) {
@@ -223,7 +210,6 @@ export default function App() {
     }
   };
 
-  // centralized access request handling
   const handleAddAccessRequest = async (request: Partial<AccessRequest>) => {
     const cleanEmail = request.email?.trim().toLowerCase() || '';
     if (!cleanEmail) return;
@@ -233,7 +219,7 @@ export default function App() {
       firstName: request.firstName || 'مجهول',
       lastName: request.lastName || 'مجهول',
       email: cleanEmail,
-      purpose: request.purpose || 'تسجيل دخول وتفعيل تلقائي كونسيرج عبر Google',
+      purpose: request.purpose || 'تسجيل دخول وتفعيل تلقائي  عبر Google',
       status: 'قيد الانتظار',
       requestDate: new Date().toLocaleDateString('ar-EG'),
       position: request.position || 'عضو طامح'
@@ -276,7 +262,6 @@ export default function App() {
     }
   };
 
-  // Increment total distributed amount dynamically when user wins something valuable!
   const handleRecordWin = async (prizeLabel: string, valueAssumed: number, customerName?: string, customerPhone?: string) => {
     try {
       const winId = `win_${Date.now()}`;
@@ -297,7 +282,6 @@ export default function App() {
 
       await setDoc(doc(db, 'wins', winId), winRecord);
 
-      // Keep stats summary document in sync too
       await setDoc(doc(db, 'stats', 'dashboard'), {
         totalDistributed: totalDistributed + valueAssumed,
         increasePercentage: 12.5
@@ -336,7 +320,7 @@ export default function App() {
     }
   };
 
-  const loggedInUserName = auth.currentUser?.displayName || localStorage.getItem('bypass_name') || 'عضو كونسيرج مميز';
+  const loggedInUserName = auth.currentUser?.displayName || localStorage.getItem('bypass_name') || 'عضو مميز';
   const loggedInUserEmail = auth.currentUser?.email || localStorage.getItem('bypass_email') || '';
 
   return (

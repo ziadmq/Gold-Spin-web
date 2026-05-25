@@ -1,9 +1,50 @@
-import React, { useState } from 'react';
-import { Gift, Hourglass, ArrowLeft, X, ShieldCheck, Headphones } from 'lucide-react';
-import { AccessRequest } from '../types';
-import { auth, db, handleFirestoreError, OperationType } from '../firebase';
-import { GoogleAuthProvider, signInWithPopup, signInAnonymously } from 'firebase/auth';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Gift, Hourglass, ArrowLeft, X, Headphones } from 'lucide-react';
+import { AccessRequest } from '../../types/types';
+import { auth, db } from '../../services/firebase';
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  signInAnonymously,
+  type User,
+} from 'firebase/auth';
+
+type AuthErrorLike = { code?: string };
 import { getDoc, doc } from 'firebase/firestore';
+
+const GOOGLE_AUTH_REDIRECT_KEY = 'google_auth_redirect';
+
+const POPUP_FALLBACK_CODES = new Set([
+  'auth/popup-blocked',
+  'auth/popup-closed-by-user',
+  'auth/cancelled-popup-request',
+  'auth/operation-not-supported-in-this-environment',
+  'auth/internal-error',
+]);
+
+function isEmbeddedContext(): boolean {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+}
+
+function getGoogleAuthErrorMessage(error: unknown): string {
+  const code = (error as AuthErrorLike)?.code ?? '';
+  switch (code) {
+    case 'auth/unauthorized-domain':
+      return 'النطاق الحالي غير مسموح في Firebase. أضف localhost والنطاق في Authentication → Settings → Authorized domains.';
+    case 'auth/popup-blocked':
+      return 'المتصفح حظر النافذة المنبثقة. جرّب مرة أخرى أو افتح التطبيق في تبويب مستقل (ليس داخل معاينة مدمجة).';
+    case 'auth/network-request-failed':
+      return 'فشل الاتصال بالشبكة. تحقق من الإنترنت وحاول مجدداً.';
+    default:
+      return 'فشل تسجيل الدخول عبر Google. جرّب تبويباً مستقلاً أو اسمح بملفات تعريف الارتباط للطرف الثالث.';
+  }
+}
 
 interface AuthPageProps {
   onLoginSuccess: (role: 'admin' | 'user') => void;
@@ -19,6 +60,79 @@ export default function AuthPage({ onLoginSuccess, onRequestAccess, onBackToWhee
   const [showAccountSelector, setShowAccountSelector] = useState(false);
   const [activeDialog, setActiveDialog] = useState<'support' | null>(null);
   const [iframeErrorOccurred, setIframeErrorOccurred] = useState(false);
+  const [authErrorMessage, setAuthErrorMessage] = useState('');
+
+  const processGoogleUser = useCallback(async (user: User) => {
+    const email = user.email ? user.email.trim().toLowerCase() : '';
+    const displayName = user.displayName || 'عضو جوجل';
+
+    setSelectedGoogleEmail(email);
+    setIsSubmitted(true);
+    setAuthErrorMessage('');
+    setIframeErrorOccurred(false);
+
+    if (email === 'kafehazyad5@gmail.com') {
+      setGoogleAccountStatus('approved');
+      setTimeout(() => {
+        onLoginSuccess('admin');
+      }, 800);
+      return;
+    }
+
+    const reqDoc = await getDoc(doc(db, 'accessRequests', email));
+    if (reqDoc.exists()) {
+      const reqData = reqDoc.data() as AccessRequest;
+      if (reqData.status === 'مقبول') {
+        setGoogleAccountStatus('approved');
+        setTimeout(() => {
+          onLoginSuccess('user');
+        }, 800);
+      } else if (reqData.status === 'مرفوض') {
+        setGoogleAccountStatus('rejected');
+      } else {
+        setGoogleAccountStatus('pending');
+      }
+    } else {
+      const nameParts = displayName.split(' ');
+      onRequestAccess({
+        firstName: nameParts[0] || 'عضو',
+        lastName: nameParts[1] || 'جوجل',
+        email,
+        purpose: 'تسجيل دخول وتفعيل سريع عبر Google Sign-In وتخزين السجلات بـ Firebase',
+        status: 'قيد الانتظار',
+        position: 'عضو كبار شخصيات معتمد',
+      });
+      setGoogleAccountStatus('pending');
+    }
+  }, [onLoginSuccess, onRequestAccess]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!sessionStorage.getItem(GOOGLE_AUTH_REDIRECT_KEY)) {
+        return;
+      }
+      try {
+        const result = await getRedirectResult(auth);
+        sessionStorage.removeItem(GOOGLE_AUTH_REDIRECT_KEY);
+        if (cancelled || !result?.user) {
+          return;
+        }
+        await processGoogleUser(result.user);
+      } catch (error) {
+        sessionStorage.removeItem(GOOGLE_AUTH_REDIRECT_KEY);
+        if (!cancelled) {
+          console.error('Firebase Google redirect login failed:', error);
+          setAuthErrorMessage(getGoogleAuthErrorMessage(error));
+          setIframeErrorOccurred(true);
+          setIsSubmitted(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [processGoogleUser]);
 
   const handleDemoBypassSignInAdmin = async () => {
     try {
@@ -56,58 +170,51 @@ export default function AuthPage({ onLoginSuccess, onRequestAccess, onBackToWhee
     }
   };
 
+  const startGoogleRedirect = async (provider: GoogleAuthProvider) => {
+    sessionStorage.setItem(GOOGLE_AUTH_REDIRECT_KEY, '1');
+    await signInWithRedirect(auth, provider);
+  };
+
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({
-      prompt: 'select_account'
+      prompt: 'select_account',
     });
-    
+
+    setIframeErrorOccurred(false);
+    setAuthErrorMessage('');
+
+    if (isEmbeddedContext()) {
+      try {
+        await startGoogleRedirect(provider);
+      } catch (error) {
+        sessionStorage.removeItem(GOOGLE_AUTH_REDIRECT_KEY);
+        console.error('Firebase Google redirect login failed:', error);
+        setAuthErrorMessage(getGoogleAuthErrorMessage(error));
+        setIframeErrorOccurred(true);
+      }
+      return;
+    }
+
     try {
-      setIframeErrorOccurred(false);
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const email = user.email ? user.email.trim().toLowerCase() : '';
-      const displayName = user.displayName || 'عضو جوجل';
-      
-      setSelectedGoogleEmail(email);
-      setIsSubmitted(true);
-      
-      if (email === 'kafehazyad5@gmail.com') {
-        setGoogleAccountStatus('approved');
-        setTimeout(() => {
-          onLoginSuccess('admin');
-        }, 800);
-        return;
-      }
-      
-      // Check Firestore doc directly
-      const reqDoc = await getDoc(doc(db, 'accessRequests', email));
-      if (reqDoc.exists()) {
-        const reqData = reqDoc.data() as AccessRequest;
-        if (reqData.status === 'مقبول') {
-          setGoogleAccountStatus('approved');
-          setTimeout(() => {
-            onLoginSuccess('user');
-          }, 800);
-        } else if (reqData.status === 'مرفوض') {
-          setGoogleAccountStatus('rejected');
-        } else {
-          setGoogleAccountStatus('pending');
-        }
-      } else {
-        const nameParts = displayName.split(' ');
-        onRequestAccess({
-          firstName: nameParts[0] || 'عضو',
-          lastName: nameParts[1] || 'جوجل',
-          email,
-          purpose: 'تسجيل دخول وتفعيل سريع عبر Google Sign-In وتخزين السجلات بـ Firebase',
-          status: 'قيد الانتظار',
-          position: 'عضو كبار شخصيات معتمد'
-        });
-        setGoogleAccountStatus('pending');
-      }
+      await processGoogleUser(result.user);
     } catch (error) {
-      console.error("Firebase Google Auth login failed:", error);
+      const code = (error as AuthErrorLike)?.code ?? '';
+      if (POPUP_FALLBACK_CODES.has(code)) {
+        try {
+          await startGoogleRedirect(provider);
+          return;
+        } catch (redirectError) {
+          console.error('Firebase Google redirect fallback failed:', redirectError);
+          setAuthErrorMessage(getGoogleAuthErrorMessage(redirectError));
+          setIframeErrorOccurred(true);
+          setIsSubmitted(false);
+          return;
+        }
+      }
+      console.error('Firebase Google Auth login failed:', error);
+      setAuthErrorMessage(getGoogleAuthErrorMessage(error));
       setIframeErrorOccurred(true);
       setIsSubmitted(false);
     }
@@ -140,6 +247,9 @@ export default function AuthPage({ onLoginSuccess, onRequestAccess, onBackToWhee
     setSelectedGoogleEmail('');
     setGoogleAccountStatus('idle');
     setShowAccountSelector(false);
+    setIframeErrorOccurred(false);
+    setAuthErrorMessage('');
+    sessionStorage.removeItem(GOOGLE_AUTH_REDIRECT_KEY);
   };
 
   return (
@@ -177,7 +287,7 @@ export default function AuthPage({ onLoginSuccess, onRequestAccess, onBackToWhee
 
               {iframeErrorOccurred && (
                 <div className="p-3 bg-red-50 border border-red-200/75 rounded-lg text-xs text-red-800 leading-relaxed font-semibold">
-                  🔴 فشل الاتصال بنافذة Google المنبثقة. تم الكشف عن قيود ملفات تعريف الارتباط للطرف الثالث (Third-Party Cookies) بالمتصفح. يرجى استخدام أزرار الدخول السريع للاختبار أو افتح في تبويب مستقل.
+                  🔴 {authErrorMessage || 'فشل تسجيل الدخول عبر Google. افتح http://localhost:3000 في تبويب مستقل (Chrome/Edge) وتأكد من تفعيل Google في Firebase Console.'}
                 </div>
               )}
 

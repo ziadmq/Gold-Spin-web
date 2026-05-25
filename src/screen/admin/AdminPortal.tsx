@@ -5,7 +5,7 @@ import {
   ChevronRight, Check, X, Shield, RefreshCw, BarChart3,
   MessageSquare, Copy, Menu
 } from 'lucide-react';
-import { Prize, AccessRequest, WinRecord } from '../types';
+import { Prize, AccessRequest, WinRecord } from '../../types/types';
 
 interface AdminPortalProps {
   prizes: Prize[];
@@ -39,11 +39,9 @@ export default function AdminPortal({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleteWinId, setDeleteWinId] = useState<string | null>(null);
   
-  // Prize modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPrize, setEditingPrize] = useState<Prize | null>(null);
   
-  // Prize form states
   const [prizeLabel, setPrizeLabel] = useState('');
   const [prizeProb, setPrizeProb] = useState(10);
   const [prizeColor, setPrizeColor] = useState('#ffffff');
@@ -51,16 +49,13 @@ export default function AdminPortal({
   const [prizeStatus, setPrizeStatus] = useState<'نشط' | 'غير نشط'>('نشط');
   const [prizeCost, setPrizeCost] = useState<number>(100);
 
-  // Custom winner message template states
   const [msgTemplate, setMsgTemplate] = useState<string>(
     'مرحباً {customer_name}! مبروك فوزك بـ {prize_name} بقيمة {prize_value}$ في سحب Gold Spin! تفاصيل جائزتك جاهزة للاستلام لدى الفرع.'
   );
   const [successSentMsg, setSuccessSentMsg] = useState<string | null>(null);
 
-  // Reports message
   const [reportSuccessMsg, setReportSuccessMsg] = useState('');
 
-  // Settings toggles with localStorage persistence
   const [soundEnabled, setSoundEnabled] = useState(() => {
     const saved = localStorage.getItem('sound_enabled');
     return saved === null ? true : saved === 'true';
@@ -130,7 +125,6 @@ export default function AdminPortal({
     }, 4000);
   };
 
-  // Safe probability calculations
   const totalProbability = prizes.reduce((sum, p) => sum + p.probability, 0);
 
   return (
