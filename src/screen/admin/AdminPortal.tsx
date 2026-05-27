@@ -295,15 +295,27 @@ export default function AdminPortal({
             </p>
           </div>
 
-          {activeTab === 'prizes' && (
-            <button
-              onClick={openAddModal}
-              className="gold-gradient text-white text-xs font-bold px-5 py-3 rounded-lg flex items-center gap-2 cursor-pointer btn-hover-effect"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>إضافة جائزة جديدة</span>
-            </button>
-          )}
+          <div className="flex gap-2">
+            {onGoToWheel && (
+              <button
+                onClick={onGoToWheel}
+                className="bg-amber-100 border border-amber-300 text-amber-800 hover:bg-amber-200 text-xs font-bold px-5 py-3 rounded-lg flex items-center gap-2 cursor-pointer transition-colors shadow-sm"
+              >
+                <span>فتح العجلة الآن</span>
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            )}
+            
+            {activeTab === 'prizes' && (
+              <button
+                onClick={openAddModal}
+                className="gold-gradient text-white text-xs font-bold px-5 py-3 rounded-lg flex items-center gap-2 cursor-pointer btn-hover-effect"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>إضافة جائزة جديدة</span>
+              </button>
+            )}
+          </div>
         </header>
 
         {reportSuccessMsg && (
