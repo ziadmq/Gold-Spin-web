@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SplashScreen from '../components/SplashScreen';
 import { Prize, AccessRequest, WinRecord } from '../types/types';
 import AuthPage from '../screen/auth/AuthPage';
 import UserWheelPage from '../screen/user/UserWheelPage';
@@ -13,25 +14,13 @@ const defaultPrizes: Prize[] = [
 
 const defaultRequests: AccessRequest[] = [];
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true);
   const [prizes, setPrizes] = useState<Prize[]>(defaultPrizes);
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>(defaultRequests);
   const [wins, setWins] = useState<WinRecord[]>([]);
   const [currentRole, setCurrentRole] = useState<'visitor' | 'admin' | 'user'>('visitor');
   const [totalDistributed, setTotalDistributed] = useState(0);
 
-  useEffect(() => {
-    const unsubscribeInit = onAuthStateChanged(auth, (user) => {
-      unsubscribeInit();
-      if (user && !user.isAnonymous) {
-        return;
-      }
-      localStorage.removeItem('bypass_email');
-      localStorage.removeItem('bypass_name');
-      if (user) {
-        signOut(auth).catch(err => console.error("Initial sign out failed:", err));
-      }
-    });
-  }, []);
 
   useEffect(() => {
     let unsubPrizes: (() => void) | undefined;
@@ -109,7 +98,7 @@ export default function App() {
 
         const email = firebaseUser.email?.trim().toLowerCase() || localStorage.getItem('bypass_email') || '';
 
-        if (email === 'Sbeihmorad07@gmail.com') {
+        if (email === 'sbeihmorad07@gmail.com') {
           unsubWins = onSnapshot(collection(db, 'wins'), (snapshot) => {
             const list = snapshot.docs.map(changeDoc => changeDoc.data() as WinRecord);
             list.sort((a, b) => b.id.localeCompare(a.id));
@@ -138,7 +127,7 @@ export default function App() {
           });
         }
 
-        if (email === 'Sbeihmorad07@gmail.com') {
+        if (email === 'sbeihmorad07@gmail.com') {
           setCurrentRole('admin');
           unsubRequests = onSnapshot(collection(db, 'accessRequests'), (snapshot) => {
             const list = snapshot.docs.map(changeDoc => changeDoc.data() as AccessRequest);
@@ -331,10 +320,11 @@ export default function App() {
   const loggedInUserEmail = auth.currentUser?.email || localStorage.getItem('bypass_email') || '';
 
   return (
-    <div className="min-h-screen bg-[#f9f9f9] flex flex-col relative select-none">
+    <div className="min-h-screen flex flex-col relative select-none" style={{ background: '#2c2010' }}>
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
       
       {/* Main Interaction Screen Router */}
-      <div className="flex-grow flex items-center justify-center p-4">
+      <div className="flex-grow flex items-center justify-center">
         {currentRole === 'visitor' && (
           <AuthPage 
             onLoginSuccess={handleLoginSuccess}

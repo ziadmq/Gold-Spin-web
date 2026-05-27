@@ -71,7 +71,7 @@ export default function AuthPage({ onLoginSuccess, onRequestAccess, onBackToWhee
     setAuthErrorMessage('');
     setIframeErrorOccurred(false);
 
-    if (email === 'Sbeihmorad07@gmail.com') {
+    if (email === 'sbeihmorad07@gmail.com') {
       setGoogleAccountStatus('approved');
       setTimeout(() => {
         onLoginSuccess('admin');
@@ -138,7 +138,7 @@ export default function AuthPage({ onLoginSuccess, onRequestAccess, onBackToWhee
     try {
       setIsSubmitted(true);
       setIframeErrorOccurred(false);
-      localStorage.setItem('bypass_email', 'Sbeihmorad07@gmail.com');
+      localStorage.setItem('bypass_email', 'sbeihmorad07@gmail.com');
       localStorage.setItem('bypass_name', 'مسؤول النظام (معاينة)');
       
       await signInAnonymously(auth);
@@ -254,19 +254,96 @@ export default function AuthPage({ onLoginSuccess, onRequestAccess, onBackToWhee
 
   return (
     <div className="w-full flex items-center justify-center min-h-[60vh] sm:min-h-[75vh] px-3 sm:px-4 py-4 sm:py-8">
+
+      {/* Animated brand keyframes */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Noto+Naskh+Arabic:wght@400;600;700&display=swap');
+        @keyframes shimmer-gold {
+          0%   { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+        @keyframes float-brand {
+          0%, 100% { transform: translateY(0px); }
+          50%       { transform: translateY(-6px); }
+        }
+        @keyframes glow-pulse {
+          0%, 100% { text-shadow: 0 0 8px rgba(197,160,89,0.4), 0 0 20px rgba(197,160,89,0.15); }
+          50%       { text-shadow: 0 0 18px rgba(197,160,89,0.75), 0 0 40px rgba(197,160,89,0.35); }
+        }
+        @keyframes card-enter {
+          from { opacity: 0; transform: translateY(28px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0)  scale(1); }
+        }
+        @keyframes line-grow {
+          from { width: 0; opacity: 0; }
+          to   { width: 80px; opacity: 1; }
+        }
+        @keyframes icon-float {
+          0%, 100% { transform: translateY(0) rotate(-2deg); }
+          50%       { transform: translateY(-8px) rotate(2deg); }
+        }
+        .auth-card-anim { animation: card-enter 0.7s cubic-bezier(0.34,1.2,0.64,1) both; }
+        .brand-float    { animation: float-brand 3.8s ease-in-out infinite; }
+        .brand-glow     { animation: glow-pulse 2.8s ease-in-out infinite; }
+        .shimmer-text {
+          background: linear-gradient(90deg, #775a19 0%, #c5a059 25%, #ffdea5 50%, #c5a059 75%, #775a19 100%);
+          background-size: 300% auto;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          animation: shimmer-gold 4s linear infinite, float-brand 3.8s ease-in-out infinite;
+        }
+        .deco-line {
+          height: 1px;
+          background: linear-gradient(90deg, transparent, #c5a059, transparent);
+          animation: line-grow 1s ease 0.4s both;
+        }
+        .icon-anim { animation: icon-float 3.2s ease-in-out infinite; }
+      `}</style>
       
       {/* Centered Premium Luxury Login Card */}
-      <div className="w-full max-w-md sm:max-w-lg bg-white luxury-shadow rounded-2xl border border-[#d1c5b4]/40 overflow-hidden flex flex-col p-5 sm:p-8 md:p-12 text-center relative justify-between transition-all duration-300">
+      <div className="auth-card-anim w-full max-w-md sm:max-w-lg bg-white luxury-shadow rounded-2xl border border-[#d1c5b4]/40 overflow-hidden flex flex-col p-5 sm:p-8 md:p-12 text-center relative justify-between transition-all duration-300">
         
         {/* Subtle royal background radial glowing spot */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(197,160,89,0.06)_0%,transparent_70%)] pointer-events-none"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(197,160,89,0.08)_0%,transparent_65%)] pointer-events-none"></div>
 
         {/* Centered Gift Logo & Brand Title */}
         <div className="flex flex-col items-center mb-6 sm:mb-8 select-none">
-          <div className="mb-3 sm:mb-4 p-3 sm:p-4 rounded-full bg-gradient-to-b from-[#775a19]/15 to-transparent border border-[#775a19]/25 flex items-center justify-center">
-            <Gift className="text-[#775a19] w-10 h-10 sm:w-12 sm:h-12 animate-bounce" style={{ animationDuration: '3.5s' }} />
+          {/* Animated icon */}
+          <div className="icon-anim mb-3 sm:mb-4 p-3 sm:p-4 rounded-full bg-gradient-to-b from-[#775a19]/15 to-transparent border border-[#775a19]/30 flex items-center justify-center shadow-[0_0_20px_rgba(197,160,89,0.15)]">
+            <Gift className="text-[#775a19] w-10 h-10 sm:w-12 sm:h-12" />
           </div>
-          <h1 className="font-serif text-3xl sm:text-4xl text-[#775a19] font-extrabold tracking-wider">angel perfum</h1>
+
+          {/* Decorative top line */}
+          <div className="deco-line mb-3" style={{ width: '80px' }} />
+
+          {/* Animated brand name */}
+          <h1
+            className="shimmer-text brand-glow"
+            style={{
+              fontFamily: '"Playfair Display", Georgia, serif',
+              fontSize: 'clamp(1.9rem, 6vw, 2.8rem)',
+              fontWeight: 900,
+              letterSpacing: '0.06em',
+              lineHeight: 1.1,
+              marginBottom: '6px',
+            }}
+          >
+            Angel Perfum
+          </h1>
+
+          {/* Tagline */}
+          <p style={{
+            fontFamily: '"Hanken Grotesk", sans-serif',
+            fontSize: '0.65rem',
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            color: 'rgba(119,90,25,0.55)',
+            marginTop: '2px',
+          }}>Luxury Fragrance</p>
+
+          {/* Decorative bottom line */}
+          <div className="deco-line mt-3" style={{ width: '80px' }} />
         </div>
 
         {/* Content Area */}

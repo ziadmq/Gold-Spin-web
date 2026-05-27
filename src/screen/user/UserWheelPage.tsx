@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Gift, RefreshCw, Sparkles, User, Award, Check } from 'lucide-react';
+import { Gift, RefreshCw, User, Check, LogOut, Star, Sparkles } from 'lucide-react';
 import { Prize } from '../../types/types';
 
 interface UserWheelPageProps {
@@ -17,13 +17,23 @@ interface UserWheelPageProps {
   userEmail?: string;
 }
 
-export default function UserWheelPage({ 
-  prizes, 
-  onLogout, 
-  onRecordWin, 
-  onAdminLoginClick,
-  userDisplayName = 'عضو  مميز',
-  userEmail = ''
+// Black & Gold alternating palette
+const SLICE_COLORS = [
+  { bg: '#0d0900', bgLight: '#1e1500', bgDark: '#050400', text: '#d4af37', dot: '#d4af37' }, // Black
+  { bg: '#c9a84c', bgLight: '#f0d070', bgDark: '#8a6820', text: '#0d0900', dot: '#0d0900' }, // Gold
+  { bg: '#0d0900', bgLight: '#1e1500', bgDark: '#050400', text: '#d4af37', dot: '#d4af37' }, // Black
+  { bg: '#c9a84c', bgLight: '#f0d070', bgDark: '#8a6820', text: '#0d0900', dot: '#0d0900' }, // Gold
+  { bg: '#0d0900', bgLight: '#1e1500', bgDark: '#050400', text: '#d4af37', dot: '#d4af37' }, // Black
+  { bg: '#c9a84c', bgLight: '#f0d070', bgDark: '#8a6820', text: '#0d0900', dot: '#0d0900' }, // Gold
+  { bg: '#0d0900', bgLight: '#1e1500', bgDark: '#050400', text: '#d4af37', dot: '#d4af37' }, // Black
+  { bg: '#c9a84c', bgLight: '#f0d070', bgDark: '#8a6820', text: '#0d0900', dot: '#0d0900' }, // Gold
+];
+
+export default function UserWheelPage({
+  prizes,
+  onLogout,
+  onRecordWin,
+  userDisplayName = 'عضو مميز',
 }: UserWheelPageProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -31,32 +41,25 @@ export default function UserWheelPage({
   const [showWinModal, setShowWinModal] = useState(false);
   const [winningPrize, setWinningPrize] = useState<Prize | null>(null);
   const [winningValueAssumed, setWinningValueAssumed] = useState<number>(0);
-  const [confetti, setConfetti] = useState<{ id: number; left: string; color: string; delay: string; duration: string; size: string }[]>([]);
+  const [confetti, setConfetti] = useState<{
+    id: number; left: string; color: string; delay: string;
+    duration: string; size: string; shape: string;
+  }[]>([]);
 
-  // Customer information collection states
-  const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
+  const [customerPrice, setCustomerPrice] = useState('');
   const [customerError, setCustomerError] = useState('');
 
-  const [spinDuration, setSpinDuration] = useState(() => {
+  const [spinDuration] = useState(() => {
     const saved = localStorage.getItem('spin_duration');
-    return saved ? parseFloat(saved) : 4.1;
+    return saved ? parseFloat(saved) : 4.5;
   });
-
-  useEffect(() => {
-    const saved = localStorage.getItem('spin_duration');
-    if (saved) {
-      setSpinDuration(parseFloat(saved));
-    }
-  }, []);
 
   const activePrizes = prizes.filter(p => p.status === 'نشط');
 
-  useEffect(() => {
-    drawWheel();
-  }, [activePrizes]);
+  useEffect(() => { drawWheel(); }, [activePrizes]);
 
   const drawWheel = () => {
     const canvas = canvasRef.current;
@@ -64,482 +67,783 @@ export default function UserWheelPage({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const width = canvas.width;
-    const height = canvas.height;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = width / 2 - 10;
-    const numSlices = activePrizes.length;
+    const SIZE = 500;
+    canvas.width = SIZE;
+    canvas.height = SIZE;
+    const cx = SIZE / 2;
+    const cy = SIZE / 2;
+    const radius = SIZE / 2 - 10;
+    const n = activePrizes.length;
 
-    if (numSlices === 0) {
-      ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = '#0b0b0b';
-      ctx.fillRect(0, 0, width, height);
-      ctx.font = '20px sans-serif';
+    ctx.clearRect(0, 0, SIZE, SIZE);
+
+    if (n === 0) {
+      ctx.fillStyle = '#2e2318';
+      ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
+      ctx.font = 'bold 16px sans-serif';
       ctx.fillStyle = '#d4af37';
       ctx.textAlign = 'center';
-      ctx.fillText('لا توجد جوائز نشطة حالياً', centerX, centerY);
+      ctx.fillText('لا توجد جوائز نشطة', cx, cy);
       return;
     }
 
-    const sliceAngle = (2 * Math.PI) / numSlices;
+    const sliceAngle = (Math.PI * 2) / n;
 
-    ctx.clearRect(0, 0, width, height);
-    // Wheel background: black + subtle gold glow
-    ctx.save();
-    ctx.fillStyle = '#0b0b0b';
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.shadowColor = 'rgba(212,175,55,0.22)';
-    ctx.shadowBlur = 18;
-    ctx.strokeStyle = '#d4af37';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.stroke();
-    ctx.restore();
-
+    // Draw each slice — alternating Black & Gold
     activePrizes.forEach((prize, i) => {
-      const angle = i * sliceAngle;
+      const startA = i * sliceAngle;
+      const endA = startA + sliceAngle;
+      const midA = startA + sliceAngle / 2;
+      const p = SLICE_COLORS[i % SLICE_COLORS.length];
+      const isGold = i % 2 === 1;
+
+      // Radial gradient: bright near slice center, darker toward edge
+      const gx = cx + (radius * 0.5) * Math.cos(midA);
+      const gy = cy + (radius * 0.5) * Math.sin(midA);
+      const grad = ctx.createRadialGradient(gx, gy, 0, cx, cy, radius);
+      grad.addColorStop(0,   p.bgLight);
+      grad.addColorStop(0.5, p.bg);
+      grad.addColorStop(1,   p.bgDark);
 
       ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.arc(centerX, centerY, radius, angle, angle + sliceAngle);
-      ctx.fillStyle = prize.color;
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius - 5, startA, endA);
+      ctx.closePath();
+      ctx.fillStyle = grad;
       ctx.fill();
 
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#000000';
+      // Gold divider lines (bright on black slice, dark on gold slice)
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + radius * Math.cos(startA), cy + radius * Math.sin(startA));
+      ctx.strokeStyle = isGold ? '#0d0900' : '#d4af37';
+      ctx.lineWidth = 2.5;
+      ctx.globalAlpha = isGold ? 0.6 : 1;
       ctx.stroke();
+      ctx.globalAlpha = 1;
 
+      // Decorative dot near outer edge
+      const dotR = radius - 20;
       ctx.save();
-      ctx.translate(centerX, centerY);
-      ctx.rotate(angle + sliceAngle / 2);
-      ctx.textAlign = 'right';
-      
-      ctx.fillStyle = '#d4af37';
-      
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-      ctx.shadowBlur = 6;
-      ctx.shadowOffsetX = 1.5;
-      ctx.shadowOffsetY = 1.5;
+      ctx.translate(cx + dotR * Math.cos(midA), cy + dotR * Math.sin(midA));
+      ctx.beginPath();
+      ctx.arc(0, 0, isGold ? 4 : 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = p.dot;
+      ctx.globalAlpha = isGold ? 0.7 : 0.85;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.restore();
 
-      ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
-      const labelToShow = prize.label.length > 18 ? prize.label.substring(0, 16) + '..' : prize.label;
-      ctx.fillText(labelToShow, radius - 30, 6);
+      // Prize label
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(midA);
+      ctx.textAlign = 'right';
+
+      const fontSize = n > 10 ? 11 : n > 6 ? 13 : 15;
+      ctx.font = `900 ${fontSize}px "Segoe UI", system-ui, sans-serif`;
+
+      // Shadow: opposite of text color for contrast
+      ctx.shadowColor = isGold ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
+      ctx.fillStyle = p.text;
+
+      const maxChars = n > 8 ? 10 : 14;
+      const lbl = prize.label.length > maxChars
+        ? prize.label.substring(0, maxChars - 1) + '…'
+        : prize.label;
+      ctx.fillText(lbl, radius - 26, fontSize / 2);
+      ctx.shadowBlur = 0;
       ctx.restore();
     });
 
-    // Outer rings: black + gold
+    // Outer thick dark border
     ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.lineWidth = 10;
-    ctx.strokeStyle = '#000000';
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.lineWidth = 18;
+    ctx.strokeStyle = '#1e1810';
     ctx.stroke();
 
+    // Outer gold conic ring
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(centerX, centerY, radius - 8, 0, 2 * Math.PI);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = '#d4af37';
+    ctx.arc(cx, cy, radius - 7, 0, Math.PI * 2);
+    ctx.lineWidth = 5;
+    const conicGrad = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+    conicGrad.addColorStop(0,   '#fff8e1');
+    conicGrad.addColorStop(0.3, '#d4af37');
+    conicGrad.addColorStop(0.6, '#fde8a0');
+    conicGrad.addColorStop(1,   '#c9a84c');
+    ctx.strokeStyle = conicGrad;
+    ctx.shadowColor = 'rgba(212,175,55,0.9)';
+    ctx.shadowBlur = 20;
+    ctx.stroke();
+    ctx.restore();
+
+    // Inner thin separator ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius - 14, 0, Math.PI * 2);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(212,175,55,0.3)';
     ctx.stroke();
 
-    // Center hub (gold ring over black)
+    // Diamond tick marks
+    const tickN = Math.max(n * 2, 20);
+    for (let t = 0; t < tickN; t++) {
+      const ta = (t / tickN) * Math.PI * 2;
+      ctx.save();
+      ctx.translate(cx + (radius - 5) * Math.cos(ta), cy + (radius - 5) * Math.sin(ta));
+      ctx.rotate(ta + Math.PI / 4);
+      ctx.fillStyle = t % 2 === 0 ? '#fde8a0' : 'rgba(212,175,55,0.4)';
+      ctx.fillRect(-2.5, -2.5, 5, 5);
+      ctx.restore();
+    }
+
+    // Center hub — gold gradient
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 20, 0, 2 * Math.PI);
-    ctx.fillStyle = '#000000';
+    ctx.arc(cx, cy, 38, 0, Math.PI * 2);
+    ctx.fillStyle = '#1e1810';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 20;
     ctx.fill();
+    ctx.restore();
+
+    const hubGrad = ctx.createRadialGradient(cx - 7, cy - 7, 0, cx, cy, 34);
+    hubGrad.addColorStop(0,   '#fff8e1');
+    hubGrad.addColorStop(0.25, '#fde8a0');
+    hubGrad.addColorStop(0.6, '#d4af37');
+    hubGrad.addColorStop(1,   '#7a5c1a');
+    ctx.beginPath();
+    ctx.arc(cx, cy, 34, 0, Math.PI * 2);
+    ctx.fillStyle = hubGrad;
+    ctx.shadowColor = 'rgba(212,175,55,1)';
+    ctx.shadowBlur = 30;
+    ctx.fill();
+    ctx.shadowBlur = 0;
 
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 14, 0, 2 * Math.PI);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = '#d4af37';
+    ctx.arc(cx, cy, 34, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+    ctx.fillStyle = '#1e1810';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(212,175,55,0.6)';
+    ctx.lineWidth = 1.5;
     ctx.stroke();
   };
 
   const handleSpinClick = () => {
     if (isSpinning || activePrizes.length === 0) return;
-    setCustomerError('');
-    setShowCustomerModal(true);
-  };
-
-  const handleConfirmCustomerDetails = (e: React.FormEvent) => {
-    e.preventDefault();
     if (!customerName.trim() || customerName.trim().length < 3) {
-      setCustomerError('الرجاء إدخال الاسم الكامل للعميل (3 أحرف على الأقل).');
+      setCustomerError('الرجاء إدخال الاسم الكامل (3 أحرف على الأقل).');
       return;
     }
     if (!customerPhone.trim() || customerPhone.trim().length < 6) {
-      setCustomerError('الرجاء إدخال رقم هاتف صحيح للعميل (6 أرقام على الأقل).');
+      setCustomerError('الرجاء إدخال رقم هاتف صحيح (6 أرقام على الأقل).');
       return;
     }
     if (!customerAddress.trim() || customerAddress.trim().length < 5) {
-      setCustomerError('الرجاء إدخال عنوان العميل (5 أحرف على الأقل).');
+      setCustomerError('الرجاء إدخال عنوان صحيح (5 أحرف على الأقل).');
+      return;
+    }
+    if (!customerPrice.trim() || isNaN(Number(customerPrice)) || Number(customerPrice) <= 0) {
+      setCustomerError('الرجاء إدخال سعر صحيح (رقم موجب).');
       return;
     }
     setCustomerError('');
-    setShowCustomerModal(false);
     spinTheWheel();
+  };
+
+  const handleCustomerFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSpinClick();
   };
 
   const spinTheWheel = () => {
     if (isSpinning || activePrizes.length === 0) return;
-
     setIsSpinning(true);
 
-    const spinPrizes = activePrizes.filter(p => p.probability > 0);
-    const prizesToChooseFrom = spinPrizes.length > 0 ? spinPrizes : activePrizes;
+    const eligible = activePrizes.filter(p => p.probability > 0);
+    const pool = eligible.length > 0 ? eligible : activePrizes;
+    const total = pool.reduce((s, p) => s + p.probability, 0);
+    const rnd = Math.random() * (total || 100);
+    let acc = 0; let selected = pool[0];
+    for (const p of pool) { acc += p.probability; if (rnd <= acc) { selected = p; break; } }
 
-    const totalSpinProb = prizesToChooseFrom.reduce((sum, p) => sum + p.probability, 0);
-    const randomValue = Math.random() * (totalSpinProb || 100);
-
-    let accumulatedProb = 0;
-    let selectedPrize = prizesToChooseFrom[0];
-
-    for (let i = 0; i < prizesToChooseFrom.length; i++) {
-      accumulatedProb += prizesToChooseFrom[i].probability;
-      if (randomValue <= accumulatedProb) {
-        selectedPrize = prizesToChooseFrom[i];
-        break;
-      }
-    }
-
-    let selectedPrizeIndex = activePrizes.findIndex(p => p.id === selectedPrize.id);
-    if (selectedPrizeIndex === -1) selectedPrizeIndex = 0;
-
-    const prize = activePrizes[selectedPrizeIndex];
+    const idx = activePrizes.findIndex(p => p.id === selected.id);
+    const prize = activePrizes[idx === -1 ? 0 : idx];
     setWinningPrize(prize);
 
-    const sliceDegWidth = 360 / activePrizes.length;
-    const sliceMidDeg = (selectedPrizeIndex * sliceDegWidth) + (sliceDegWidth / 2);
-    const targetOffset = (270 - sliceMidDeg + 360) % 360;
-
-    const randomRotations = 360 * (6 + Math.floor(Math.random() * 4));
-    const nextRotation = currentRotation + randomRotations + targetOffset - (currentRotation % 360);
-
-    setCurrentRotation(nextRotation);
-
-    const actualDurationMs = Math.round(spinDuration * 1000);
+    const deg = 360 / activePrizes.length;
+    const mid = idx * deg + deg / 2;
+    const offset = (270 - mid + 360) % 360;
+    const spins = 360 * (7 + Math.floor(Math.random() * 5));
+    setCurrentRotation(prev => prev + spins + offset - (prev % 360));
 
     setTimeout(() => {
       setIsSpinning(false);
       generateConfetti();
-      
-      let assumedValue = prize.cost ?? 50;
-      if (prize.cost === undefined || prize.cost === null || prize.cost === 0) {
-        if (prize.label.includes('$')) {
-          const val = parseInt(prize.label.replace(/[^0-9]/g, ''));
-          if (!isNaN(val)) assumedValue = val;
-        } else if (prize.label.toLowerCase().includes('rolex') || prize.label.includes('ساعة')) {
-          assumedValue = 12000;
-        } else if (prize.label.toLowerCase().includes('hotel') || prize.label.includes('إقامة')) {
-          assumedValue = 1500;
-        } else if (prize.label.toLowerCase().includes('vip') || prize.label.includes('ممر')) {
-          assumedValue = 400;
-        }
+      let val = prize.cost ?? 50;
+      if (!prize.cost && prize.label.includes('$')) {
+        const n = parseInt(prize.label.replace(/[^0-9]/g, ''));
+        if (!isNaN(n)) val = n;
       }
-      
-      setWinningValueAssumed(assumedValue);
+      setWinningValueAssumed(val);
       setShowWinModal(true);
-      onRecordWin(prize.label, assumedValue, customerName, customerPhone, customerAddress);
-    }, actualDurationMs);
+      onRecordWin(prize.label, val, customerName, customerPhone, customerAddress);
+    }, Math.round(spinDuration * 1000));
   };
 
   const generateConfetti = () => {
-    const list = Array.from({ length: 65 }).map((_, i) => ({
+    const colors = ['#d4af37', '#fde8a0', '#c9a84c', '#fff8e7', '#e9c176', '#7c3aed', '#1d4ed8', '#059669'];
+    setConfetti(Array.from({ length: 80 }, (_, i) => ({
       id: i,
       left: `${Math.random() * 100}vw`,
-      color: i % 2 === 0 ? '#c5a059' : '#ffdea5',
+      color: colors[i % colors.length],
       delay: `${Math.random() * 2}s`,
-      duration: `${Math.random() * 2.5 + 2}s`,
-      size: `${Math.random() * 8 + 6}px`
-    }));
-    setConfetti(list);
+      duration: `${2.5 + Math.random() * 3}s`,
+      size: `${5 + Math.random() * 10}px`,
+      shape: ['circle', 'square', 'diamond'][i % 3],
+    })));
   };
 
   const handleReset = () => {
     if (isSpinning) return;
-    setCurrentRotation(0);
-    setShowWinModal(false);
-    setWinningPrize(null);
-    setWinningValueAssumed(0);
-    setConfetti([]);
-    setCustomerName('');
-    setCustomerPhone('');
-    setCustomerAddress('');
+    setCurrentRotation(0); setShowWinModal(false); setWinningPrize(null);
+    setWinningValueAssumed(0); setConfetti([]);
+    setCustomerName(''); setCustomerPhone(''); setCustomerAddress(''); setCustomerPrice('');
   };
 
+  // ─── BG: warm deep amber, visible & readable ───
+  const PAGE_BG = 'linear-gradient(150deg, #2c2010 0%, #382810 20%, #2c2010 50%, #241a0a 80%, #1e1608 100%)';
+
   return (
-    <div className="min-h-screen bg-[#ffffff] text-[#1a1c1c] flex flex-col items-center justify-between relative overflow-x-hidden pt-24 pb-12 select-none font-sans">
-      
-      {/* Top Luxury Navigation */}
-      <nav className="bg-white/80 backdrop-blur-md fixed top-0 w-full z-45 h-20 shadow-[0px_4px_20px_rgba(197,160,89,0.08)] border-b border-[#F4EBD0]/50" dir="rtl">
-        <div className="flex justify-between items-center w-full px-6 md:px-16 max-w-7xl mx-auto h-full">
-          {/* Logo on the right for RTL layout */}
-          <div className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-[#d4af37] select-none">angel perfum</div>
+    <div style={{
+      minHeight: '100vh',
+      width: '100%',
+      background: PAGE_BG,
+      color: '#fde8a0',
+      fontFamily: '"Hanken Grotesk", "Segoe UI", sans-serif',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      position: 'relative', overflowX: 'hidden',
+      paddingTop: '84px', paddingBottom: '60px',
+      userSelect: 'none',
+    }}>
 
-          {/* User Display: Display name of the user using my program in above */}
-          <div className="flex items-center gap-2 sm:gap-4">
-            <div className="hidden sm:flex flex-col text-right font-sans leading-tight">
-              <span className="text-[10px] uppercase font-bold text-gray-400">الموظف الحالي</span>
-              <span className="text-sm font-extrabold text-[#775a19]">{userDisplayName}</span>
+      {/* ── Styles ── */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Hanken+Grotesk:wght@400;600;700;800&display=swap');
+
+        @keyframes confetti-fall {
+          0%   { transform: translateY(-30px) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(110vh)  rotate(540deg); opacity: 0; }
+        }
+        @keyframes levitate {
+          0%,100% { transform: translateY(0); }
+          50%     { transform: translateY(-10px); }
+        }
+        @keyframes shimmer {
+          0%   { background-position: -300% center; }
+          100% { background-position:  300% center; }
+        }
+        @keyframes pointer-bob {
+          0%,100% { transform: translateX(-50%) translateY(0); }
+          50%     { transform: translateX(-50%) translateY(-8px); }
+        }
+        @keyframes ring-out {
+          0%   { transform: scale(1);   opacity: 0.8; }
+          100% { transform: scale(1.8); opacity: 0;   }
+        }
+        @keyframes modal-in {
+          from { opacity: 0; transform: scale(0.85) translateY(40px); }
+          to   { opacity: 1; transform: scale(1)    translateY(0); }
+        }
+        @keyframes orb-drift {
+          0%,100% { transform: translate(0,0); }
+          50%     { transform: translate(25px,-18px); }
+        }
+        @keyframes fade-in-up {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes star-twinkle {
+          0%,100% { opacity: 0.2; transform: scale(0.6); }
+          50%     { opacity: 0.9; transform: scale(1.2); }
+        }
+
+        .levitate   { animation: levitate 4.5s ease-in-out infinite; }
+        .shimmer-text {
+          background: linear-gradient(90deg,#7a5c1a 0%,#c9a84c 20%,#fff8e1 50%,#c9a84c 80%,#7a5c1a 100%);
+          background-size: 300% auto;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          animation: shimmer 5s linear infinite;
+        }
+        .pointer-bob { animation: pointer-bob 2s ease-in-out infinite; }
+        .ring-out    { animation: ring-out 2s ease-out infinite; }
+        .modal-in    { animation: modal-in 0.5s cubic-bezier(0.34,1.25,0.64,1) both; }
+        .fade-in-up  { animation: fade-in-up 0.5s ease both; }
+        .star-twinkle { animation: star-twinkle ease-in-out infinite; }
+
+        .gold-input {
+          width: 100%; box-sizing: border-box;
+          background: rgba(255,245,220,0.08);
+          border: 1.5px solid rgba(212,175,55,0.35);
+          border-radius: 12px;
+          color: #fff8e1;
+          padding: 13px 16px;
+          font-size: 14px; font-weight: 600; text-align: right;
+          outline: none;
+          transition: all 0.25s;
+          font-family: "Hanken Grotesk", sans-serif;
+          caret-color: #d4af37;
+        }
+        .gold-input::placeholder { color: rgba(212,175,55,0.4); }
+        .gold-input:focus {
+          border-color: #d4af37;
+          box-shadow: 0 0 0 3px rgba(212,175,55,0.18);
+          background: rgba(255,245,220,0.12);
+        }
+        .nav-action-btn {
+          background: rgba(255,245,220,0.08);
+          border: 1px solid rgba(212,175,55,0.3);
+          border-radius: 10px; color: #e9c176;
+          padding: 8px 14px; cursor: pointer;
+          display: flex; align-items: center; gap: 6px;
+          font-size: 0.75rem; font-weight: 700;
+          transition: all 0.2s;
+          font-family: "Hanken Grotesk", sans-serif;
+        }
+        .nav-action-btn:hover {
+          background: rgba(212,175,55,0.18);
+          border-color: #d4af37;
+          transform: translateY(-1px);
+        }
+        .primary-btn {
+          width: 100%; padding: 15px;
+          background: linear-gradient(135deg,#7a5c1a 0%,#c9a84c 40%,#f0d070 55%,#c9a84c 70%,#7a5c1a 100%);
+          background-size: 200% auto;
+          border: none; border-radius: 14px;
+          color: #1a1208; font-weight: 900; font-size: 1rem;
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center; gap: 10px;
+          box-shadow: 0 6px 30px rgba(212,175,55,0.35), inset 0 1px 0 rgba(255,255,255,0.4);
+          transition: background-position 0.4s, transform 0.15s, box-shadow 0.2s;
+          letter-spacing: 0.03em;
+          font-family: "Playfair Display", serif;
+        }
+        .primary-btn:hover {
+          background-position: right;
+          transform: translateY(-2px);
+          box-shadow: 0 12px 40px rgba(212,175,55,0.5);
+        }
+        .primary-btn:active { transform: translateY(0); }
+
+        .prize-badge {
+          background: rgba(255,245,220,0.08);
+          border: 1px solid rgba(212,175,55,0.25);
+          border-radius: 50px;
+          padding: 10px 20px;
+          font-size: 0.78rem; font-weight: 700;
+          color: #e9c176;
+          display: flex; align-items: center; gap: 8px;
+          backdrop-filter: blur(8px);
+          box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+          letter-spacing: 0.04em;
+          transition: all 0.2s;
+        }
+        .prize-badge:hover {
+          background: rgba(212,175,55,0.14);
+          border-color: rgba(212,175,55,0.45);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 24px rgba(212,175,55,0.2);
+        }
+      `}</style>
+
+      {/* ── Background orbs & texture ── */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
+        {/* Warm amber glow orbs */}
+        {[
+          { s:500, t:'0%',  l:'-8%',  c:'rgba(212,175,55,0.12)', d:'13s' },
+          { s:600, t:'45%', l:'58%',  c:'rgba(180,140,50,0.09)', d:'17s' },
+          { s:320, t:'72%', l:'8%',   c:'rgba(212,175,55,0.1)',  d:'10s' },
+          { s:260, t:'18%', l:'72%',  c:'rgba(240,200,80,0.08)', d:'8s'  },
+        ].map((o,i) => (
+          <div key={i} style={{
+            position:'absolute', width:o.s, height:o.s, borderRadius:'50%',
+            background:`radial-gradient(circle, ${o.c} 0%, transparent 70%)`,
+            top:o.t, left:o.l, filter:'blur(55px)',
+            animation:`orb-drift ${o.d} ease-in-out infinite`,
+            animationDelay:`${i*3}s`,
+          }}/>
+        ))}
+
+        {/* Subtle dot grid for texture */}
+        <div style={{
+          position:'absolute', inset:0,
+          backgroundImage:'radial-gradient(rgba(212,175,55,0.12) 1px, transparent 1px)',
+          backgroundSize:'40px 40px',
+          opacity:0.6,
+        }}/>
+
+        {/* Stars */}
+        {Array.from({length:30}).map((_,i) => (
+          <div key={i} className="star-twinkle" style={{
+            position:'absolute',
+            width: i%6===0?'3px':'2px',
+            height: i%6===0?'3px':'2px',
+            borderRadius:'50%',
+            background: i%3===0?'#fff8e1':'#d4af37',
+            left:`${(i*3.1+5)%96}%`,
+            top:`${(i*6.7+4)%93}%`,
+            animationDuration:`${1.3+(i%5)*0.5}s`,
+            animationDelay:`${(i*0.21)%2.5}s`,
+          }}/>
+        ))}
+      </div>
+
+      {/* ── NAV BAR ── */}
+      <nav style={{
+        position:'fixed', top:0, width:'100%', zIndex:100,
+        background:'rgba(40,28,12,0.95)',
+        backdropFilter:'blur(20px)',
+        borderBottom:'1px solid rgba(212,175,55,0.25)',
+        boxShadow:'0 4px 40px rgba(0,0,0,0.5)',
+        height:'72px', display:'flex', alignItems:'center',
+      }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%', padding:'0 28px', maxWidth:'1200px', margin:'0 auto' }} dir="rtl">
+          <div>
+            <div className="shimmer-text" style={{ fontFamily:'"Playfair Display",serif', fontSize:'clamp(1.3rem,3vw,1.8rem)', fontWeight:900, letterSpacing:'0.06em' }}>
+              Angel Perfum
             </div>
-            
-            <div className="h-8 w-px bg-gray-200 hidden sm:block" />
-
-            <button
-              onClick={handleReset}
-              className="text-xs font-semibold text-[#4e4639] hover:text-[#775a19] transition-colors flex items-center gap-1.5 py-2 px-3 hover:bg-[#F4EBD0]/20 rounded-lg cursor-pointer"
-              title="إعادة ضبط العجلة والبيانات"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span className="hidden xs:inline">إعادة ضبط</span>
-            </button>
-
-            <button
-              onClick={onLogout}
-              className="w-10 h-10 rounded-full bg-[#f3f3f4] hover:bg-[#ebe2c8] flex items-center justify-center text-[#775a19] transition-colors cursor-pointer"
-              title="تسجيل الخروج"
-            >
-              <User className="w-5 h-5" />
-            </button>
+            <div style={{ fontSize:'0.52rem', letterSpacing:'0.22em', textTransform:'uppercase', color:'rgba(212,175,55,0.5)', marginTop:'-2px' }}>
+              Luxury Gifts &amp; Prizes
+            </div>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
+            <div style={{ textAlign:'right', lineHeight:1.4 }}>
+              <div style={{ fontSize:'0.6rem', fontWeight:700, textTransform:'uppercase', color:'rgba(212,175,55,0.5)', letterSpacing:'0.1em' }}>الموظف</div>
+              <div style={{ fontSize:'0.88rem', fontWeight:800, color:'#fde8a0' }}>{userDisplayName}</div>
+            </div>
+            <div style={{ width:'1px', height:'32px', background:'rgba(212,175,55,0.2)' }}/>
+            <button className="nav-action-btn" onClick={handleReset}><RefreshCw size={14}/><span>ضبط</span></button>
+            <button className="nav-action-btn" onClick={onLogout} style={{ padding:'8px 10px' }}><LogOut size={16}/></button>
           </div>
         </div>
       </nav>
 
-      {/* Decorative Blur Elements */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[20%] left-[15%] w-96 h-96 bg-[#ffdea5]/15 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-[20%] right-[15%] w-[450px] h-[450px] bg-[#ebe2c8]/25 rounded-full blur-3xl"></div>
-      </div>
-
-      {/* Confetti container */}
+      {/* ── Confetti ── */}
       {confetti.length > 0 && (
-        <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
-          {confetti.map((c) => (
-            <div
-              key={c.id}
-              className="absolute top-0 rounded-full animate-confettiFall"
-              style={{
-                left: c.left,
-                backgroundColor: c.color,
-                width: c.size,
-                height: c.size,
-                animationDelay: c.delay,
-                animationDuration: c.duration,
-                opacity: 0,
-              }}
-            />
+        <div style={{ position:'fixed', inset:0, pointerEvents:'none', zIndex:90, overflow:'hidden' }}>
+          {confetti.map(c => (
+            <div key={c.id} style={{
+              position:'absolute', top:'-30px', left:c.left,
+              width:c.size, height:c.size,
+              background:c.color,
+              borderRadius: c.shape==='circle'?'50%':c.shape==='diamond'?'0':'2px',
+              transform: c.shape==='diamond'?'rotate(45deg)':undefined,
+              animation:`confetti-fall ${c.duration} ${c.delay} linear forwards`,
+              opacity:0,
+            } as React.CSSProperties}/>
           ))}
         </div>
       )}
 
-      {/* Interactive Wheel Section */}
-      <div className="flex-grow w-full max-w-4xl px-4 flex flex-col items-center justify-center z-10 space-y-8">
-        
-        {/* The Wheel */}
-        <div className="relative flex flex-col items-center">
-          
-          {/* The Golden Pointer Indicator */}
-          <div className="absolute -top-7 left-1/2 -translate-x-1/2 z-30 drop-shadow-md">
-            <div 
-              className="w-7 h-10 gold-gradient-soft border border-[#f3f3f4]/10 shadow-md"
-              style={{ clipPath: 'polygon(0% 0%, 100% 0%, 50% 100%)' }}
-            ></div>
+      {/* ── PAGE CONTENT ── */}
+      <div style={{ zIndex:10, width:'100%', maxWidth:'960px', display:'flex', flexDirection:'column', alignItems:'center', gap:'32px', padding:'0 20px' }}>
+
+        {/* Heading */}
+        <div className="fade-in-up" style={{ textAlign:'center' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', marginBottom:'10px' }}>
+            <Star size={14} style={{ color:'#d4af37' }}/>
+            <span style={{ fontSize:'0.68rem', letterSpacing:'0.28em', textTransform:'uppercase', color:'rgba(212,175,55,0.65)', fontWeight:700 }}>عجلة الجوائز الفاخرة</span>
+            <Star size={14} style={{ color:'#d4af37' }}/>
           </div>
-
-          {/* Sizing Wrapper */}
-          <div className="relative w-[340px] h-[340px] xs:w-[410px] xs:h-[410px] sm:w-[480px] sm:h-[480px] md:w-[500px] md:h-[500px] rounded-full border-12 border-[#d4af37]/25 p-2 wheel-shadow bg-[#0b0b0b] flex items-center justify-center transition-all">
-            
-            {/* Rotating Container */}
-            <div
-              id="wheel-container"
-              style={{
-                transform: `rotate(${currentRotation}deg)`,
-                transition: isSpinning ? `transform ${spinDuration}s cubic-bezier(0.15, 0, 0.1, 1)` : 'none',
-              }}
-              className="relative w-full h-full rounded-full overflow-hidden border-2 border-[#d4af37]/60"
-            >
-              <canvas
-                ref={canvasRef}
-                width={500}
-                height={500}
-                className="w-full h-full block"
-              />
-            </div>
-
-            {/* Center Action Spin Button */}
-            <button
-              onClick={handleSpinClick}
-              disabled={isSpinning || activePrizes.length === 0}
-              className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-[#775a19] via-[#a3803b] to-[#d4af37] border-4 border-amber-50 text-white flex flex-col items-center justify-center z-20 shadow-[0_0_30px_rgba(119,90,25,0.45)] transition-all active:scale-95 group cursor-pointer ${
-                isSpinning ? 'opacity-90 scale-95 pointer-events-none' : 'hover:scale-[1.06] hover:shadow-[0_0_40px_rgba(212,175,55,0.7)]'
-              }`}
-              title="اضغط للسحب"
-            >
-              {!isSpinning && (
-                <div className="absolute -inset-2 rounded-full border-2 border-[#d4af37]/45 animate-ping pointer-events-none" />
-              )}
-              <Gift className={`w-10 h-10 text-amber-100 ${!isSpinning ? 'animate-bounce' : 'animate-pulse'}`} />
-            </button>
-
-          </div>
-
+          <h1 style={{ fontFamily:'"Playfair Display",serif', fontSize:'clamp(1.5rem,5vw,2.6rem)', fontWeight:900, color:'#fff8e1', letterSpacing:'0.02em', lineHeight:1.2, margin:0, textShadow:'0 2px 20px rgba(212,175,55,0.3)' }}>
+            ادور واربح هديتك المميزة 🎁
+          </h1>
+          <div style={{ height:'1.5px', width:'140px', background:'linear-gradient(90deg,transparent,#d4af37,transparent)', margin:'14px auto 0', borderRadius:'2px' }}/>
         </div>
 
-      </div>
+        {/* ── WHEEL ── */}
+        <div style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center' }}>
 
-      {/* Win Modal Dialog */}
-      <div 
-        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm transition-opacity duration-500 p-4 ${
-          showWinModal ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <div 
-          className={`bg-white p-8 md:p-10 rounded-2xl shadow-2xl max-w-md w-full text-center border-2 border-[#ffdea5] transform transition-all duration-500 ${
-            showWinModal ? 'scale-100 translate-y-0' : 'scale-90 translate-y-12'
-          }`}
-        >
-          <div className="font-serif text-xl font-extrabold text-[#775a19] mb-3 tracking-wide select-none">
-            angel perfum
+          {/* SVG Pointer */}
+          <div className="pointer-bob" style={{ position:'absolute', top:'-24px', left:'50%', zIndex:40, filter:'drop-shadow(0 8px 16px rgba(212,175,55,0.9))' }}>
+            <svg width="34" height="44" viewBox="0 0 34 44" fill="none">
+              <defs>
+                <linearGradient id="pgrd" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor="#fff8e1"/>
+                  <stop offset="35%"  stopColor="#fde8a0"/>
+                  <stop offset="70%"  stopColor="#d4af37"/>
+                  <stop offset="100%" stopColor="#7a5c1a"/>
+                </linearGradient>
+              </defs>
+              <polygon points="17,44 0,0 34,0" fill="url(#pgrd)"/>
+              <polygon points="17,44 0,0 34,0" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2"/>
+            </svg>
           </div>
 
-          <div className="w-20 h-20 gold-gradient rounded-full flex items-center justify-center mx-auto mb-6 shadow-md shadow-[#775a19]/20 relative">
-            <Gift className="w-10 h-10 text-white animate-bounce" />
-            <div className="absolute inset-0 rounded-full border border-white/50 animate-ping opacity-35" />
-          </div>
+          {/* Outer glow rings */}
+          <div style={{ position:'relative', display:'inline-flex', alignItems:'center', justifyContent:'center' }}>
+            {!isSpinning && <>
+              <div className="ring-out" style={{ position:'absolute', borderRadius:'50%', border:'2px solid rgba(212,175,55,0.4)', inset:'-12px', pointerEvents:'none' }}/>
+              <div className="ring-out" style={{ position:'absolute', borderRadius:'50%', border:'2px solid rgba(212,175,55,0.2)', inset:'-12px', animationDelay:'0.9s', pointerEvents:'none' }}/>
+            </>}
 
-          <h2 className="font-serif text-2xl text-[#775a19] font-bold mb-2">تهانينا! لقد فزت بـ</h2>
-          
-          <div className="font-serif text-3xl font-extrabold text-[#1a1c1c] my-4 tracking-wide border-y border-[#F4EBD0]/80 py-3 bg-[#fbfbf9]">
-            {winningPrize?.label}
-          </div>
+            {/* Conic gold border frame */}
+            <div style={{ borderRadius:'50%', padding:'6px', background:'conic-gradient(from 0deg,#7a5c1a,#d4af37,#fff8e1,#d4af37,#c9a84c,#d4af37,#fff8e1,#d4af37,#7a5c1a)', boxShadow:'0 0 50px rgba(212,175,55,0.4), 0 0 100px rgba(212,175,55,0.15)' }}>
 
-          {/* Customer receipt details (stacked) */}
-          <div className="font-sans text-sm text-[#4e4639] leading-relaxed mb-6 space-y-2">
-            <div className="flex justify-between items-center gap-4">
-              <span className="text-[11px] font-bold text-[#775a19]">اسم العميل</span>
-              <span className="font-extrabold">{customerName || '—'}</span>
-            </div>
-            <div className="flex justify-between items-center gap-4">
-              <span className="text-[11px] font-bold text-[#775a19]">رقم تلفون العميل</span>
-              <span className="font-extrabold">{customerPhone || '—'}</span>
-            </div>
-            <div className="flex justify-between items-start gap-4">
-              <span className="text-[11px] font-bold text-[#775a19]">عنوان العميل</span>
-              <span className="font-extrabold text-right">{customerAddress || '—'}</span>
-            </div>
-            <div className="flex justify-between items-center gap-4">
-              <span className="text-[11px] font-bold text-[#775a19]">قيمة الطلبيه</span>
-              <span className="font-extrabold">
-                ${(winningValueAssumed || 0).toLocaleString('ar-EG')}
-              </span>
-            </div>
-          </div>
+              {/* Dark bezel */}
+              <div style={{ borderRadius:'50%', padding:'6px', background:'#1e1608', boxShadow:'inset 0 0 30px rgba(0,0,0,0.7)' }}>
 
-          <p className="font-sans text-sm text-[#4e4639] leading-relaxed mb-8">
-            تم تسجيل هذه الجائزة الحصرية وحفظها بنجاح ضمن حسابك الخاص في قاعدة كونسيرج LuxeSpin.
-          </p>
+                {/* Wheel levitation wrapper */}
+                <div
+                  className={isSpinning?'':'levitate'}
+                  style={{
+                    width:'clamp(300px,72vw,476px)',
+                    height:'clamp(300px,72vw,476px)',
+                    borderRadius:'50%', overflow:'hidden', position:'relative',
+                    boxShadow:'inset 0 0 50px rgba(0,0,0,0.4)',
+                  }}
+                >
+                  {/* Canvas */}
+                  <div style={{
+                    width:'100%', height:'100%',
+                    transform:`rotate(${currentRotation}deg)`,
+                    transition: isSpinning?`transform ${spinDuration}s cubic-bezier(0.12,0,0.08,1)`:'none',
+                  }}>
+                    <canvas ref={canvasRef} width={500} height={500} style={{ width:'100%', height:'100%', display:'block' }}/>
+                  </div>
 
-          <button
-            onClick={() => setShowWinModal(false)}
-            className="w-full py-3.5 gold-gradient text-white font-bold rounded-lg hover:shadow-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 btn-hover-effect"
-          >
-            <Check className="w-5 h-5" />
-            <span>تأكيد واستلام الجائزة</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Customer Information Collection Modal */}
-      <div 
-        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-xs transition-opacity duration-300 p-4 ${
-          showCustomerModal ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-        dir="rtl"
-      >
-        <div 
-          className={`bg-white p-6 sm:p-8 rounded-2xl shadow-2xl max-w-md w-full text-right border border-[#ffdea5]/50 transform transition-all duration-300 ${
-            showCustomerModal ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
-          }`}
-        >
-          <div className="flex justify-between items-center border-b border-[#F4EBD0]/70 pb-3 mb-5">
-            <h3 className="font-serif text-lg font-bold text-[#775a19] flex items-center gap-2">
-              <User className="w-5 h-5 text-[#c5a059]" />
-              <span>تسجيل بيانات العميل للتدوير</span>
-            </h3>
-            <button 
-              type="button"
-              onClick={() => {
-                if (!isSpinning) {
-                  setShowCustomerModal(false);
-                  setCustomerError('');
-                }
-              }}
-              className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer text-lg font-bold"
-            >
-              ✕
-            </button>
-          </div>
-
-          <form onSubmit={handleConfirmCustomerDetails} className="space-y-4">
-            <div className="bg-[#775a19]/5 border border-[#c5a059]/20 p-3.5 rounded-xl text-xs text-[#775a19] font-medium leading-relaxed mb-4">
-              ✨ يرجى إدخال اسم ورقم هاتف وعنوان العميل لتتمكن من تدوير عجلة الجوائز. سيتم ربط الجائزة ببياناته وتوثيقها في لوحة التحكم تلقائياً.
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1.5 text-right">اسم العميل ثنائياً على الأقل *</label>
-              <input 
-                type="text" 
-                required
-                placeholder="مثال: يوسف خالد"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full text-sm font-semibold p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#775a19]/30 focus:bg-white transition-all text-right"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1.5 text-right">رقم هاتف العميل *</label>
-              <input 
-                type="tel" 
-                required
-                placeholder="مثال: 05XXXXXXXX"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                className="w-full text-sm font-semibold p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#775a19]/30 focus:bg-white transition-all text-right"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1.5 text-right">عنوان العميل *</label>
-              <textarea
-                required
-                rows={3}
-                placeholder="اكتب عنوان العميل (المنطقة/الشارع ...)"
-                value={customerAddress}
-                onChange={(e) => setCustomerAddress(e.target.value)}
-                className="w-full text-sm font-semibold p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#775a19]/30 focus:bg-white transition-all text-right resize-none"
-              />
-            </div>
-
-            {customerError && (
-              <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs font-bold text-right" dir="rtl">
-                ⚠️ {customerError}
+                  {/* Glass shine */}
+                  <div style={{ position:'absolute', inset:0, borderRadius:'50%', background:'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.1) 0%, transparent 55%)', pointerEvents:'none' }}/>
+                </div>
               </div>
-            )}
+            </div>
+          </div>
 
-            <div className="pt-2">
+          {/* Status text */}
+          <div style={{ marginTop:'22px', textAlign:'center', minHeight:'30px' }}>
+            {isSpinning
+              ? <div style={{ display:'flex', alignItems:'center', gap:'8px', justifyContent:'center' }}>
+                  <Sparkles size={15} style={{ color:'#d4af37' }}/>
+                  <span style={{ color:'#fde8a0', fontSize:'0.95rem', fontWeight:700, letterSpacing:'0.06em' }}>جاري السحب…</span>
+                  <Sparkles size={15} style={{ color:'#d4af37' }}/>
+                </div>
+              : <span style={{ color:'rgba(212,175,55,0.65)', fontSize:'0.82rem', fontWeight:600 }}>
+                  أدخل بيانات العميل واضغط على تأكيد للسحب 🎰
+                </span>
+            }
+          </div>
+        </div>
+
+        {/* Prize badges */}
+        <div style={{ display:'flex', gap:'10px', justifyContent:'center', flexWrap:'wrap', width:'100%', maxWidth:'560px' }}>
+          {[{i:'🎁',t:'جوائز حصرية'},{i:'✨',t:'هدايا فاخرة'},{i:'🏆',t:'مفاجآت مميزة'},{i:'💫',t:'سحب فوري'}].map((b,i) => (
+            <div key={i} className="prize-badge"><span>{b.i}</span><span>{b.t}</span></div>
+          ))}
+        </div>
+
+        {/* ── INLINE CUSTOMER FORM ── */}
+        <div style={{ width:'100%', maxWidth:'620px' }} dir="rtl">
+
+          {/* Section header */}
+          <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'18px' }}>
+            <div style={{ flex:1, height:'1px', background:'linear-gradient(90deg, rgba(212,175,55,0.4), transparent)' }}/>
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', whiteSpace:'nowrap' }}>
+              <User size={15} style={{ color:'#d4af37' }}/>
+              <span style={{ fontSize:'0.78rem', fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:'#d4af37' }}>بيانات العميل</span>
+            </div>
+            <div style={{ flex:1, height:'1px', background:'linear-gradient(90deg, transparent, rgba(212,175,55,0.4))' }}/>
+          </div>
+
+          {/* Form card */}
+          <div style={{
+            background:'rgba(255,245,220,0.05)',
+            border:'1px solid rgba(212,175,55,0.25)',
+            borderRadius:'20px',
+            padding:'clamp(20px,4vw,32px)',
+            backdropFilter:'blur(10px)',
+            boxShadow:'0 8px 40px rgba(0,0,0,0.3)',
+            position:'relative',
+            overflow:'hidden',
+          }}>
+            {/* Top accent line */}
+            <div style={{ position:'absolute', top:0, left:'50%', transform:'translateX(-50%)', width:'120px', height:'2px', background:'linear-gradient(90deg,transparent,#d4af37,transparent)' }}/>
+
+            <form onSubmit={handleCustomerFormSubmit}>
+              {/* 3-column grid on desktop, stacked on mobile */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:'16px', marginBottom:'16px' }}>
+
+                {/* Name */}
+                <div>
+                  <label style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'0.71rem', fontWeight:700, color:'rgba(212,175,55,0.75)', marginBottom:'8px', letterSpacing:'0.05em' }}>
+                    <span>👤</span> اسم العميل *
+                  </label>
+                  <input
+                    className="gold-input"
+                    type="text"
+                    placeholder="مثال: محمد علي"
+                    value={customerName}
+                    onChange={e => { setCustomerName(e.target.value); setCustomerError(''); }}
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'0.71rem', fontWeight:700, color:'rgba(212,175,55,0.75)', marginBottom:'8px', letterSpacing:'0.05em' }}>
+                    <span>📞</span> رقم الهاتف *
+                  </label>
+                  <input
+                    className="gold-input"
+                    type="tel"
+                    placeholder="مثال: 07XXXXXXXX"
+                    value={customerPhone}
+                    onChange={e => { setCustomerPhone(e.target.value); setCustomerError(''); }}
+                  />
+                </div>
+
+                {/* Address */}
+                <div>
+                  <label style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'0.71rem', fontWeight:700, color:'rgba(212,175,55,0.75)', marginBottom:'8px', letterSpacing:'0.05em' }}>
+                    <span>📍</span> عنوان العميل *
+                  </label>
+                  <input
+                    className="gold-input"
+                    type="text"
+                    placeholder="المنطقة / الشارع..."
+                    value={customerAddress}
+                    onChange={e => { setCustomerAddress(e.target.value); setCustomerError(''); }}
+                  />
+                </div>
+
+                {/* Price */}
+                <div>
+                  <label style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'0.71rem', fontWeight:700, color:'rgba(212,175,55,0.75)', marginBottom:'8px', letterSpacing:'0.05em' }}>
+                    <span>💰</span> سعر الطلبية *
+                  </label>
+                  <div style={{ position:'relative' }}>
+                    <input
+                      className="gold-input"
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="مثال: 25"
+                      value={customerPrice}
+                      onChange={e => { setCustomerPrice(e.target.value); setCustomerError(''); }}
+                      style={{ paddingLeft: '48px' }}
+                    />
+                    <span style={{
+                      position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)',
+                      fontSize:'0.7rem', fontWeight:800, color:'rgba(212,175,55,0.6)',
+                      pointerEvents:'none', letterSpacing:'0.04em',
+                    }}>JD</span>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Error */}
+              {customerError && (
+                <div style={{ background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'10px', padding:'11px 16px', fontSize:'0.79rem', color:'#fca5a5', fontWeight:700, marginBottom:'14px' }}>
+                  ⚠️ {customerError}
+                </div>
+              )}
+
+              {/* Spin button */}
               <button
                 type="submit"
-                className="w-full py-3.5 gold-gradient text-white font-extrabold rounded-xl hover:shadow-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                disabled={isSpinning}
+                className="primary-btn"
+                style={{ opacity: isSpinning ? 0.7 : 1, cursor: isSpinning ? 'not-allowed' : 'pointer' }}
               >
-                <Gift className="w-5 h-5 text-[#ffdea5]" />
-                <span>تأكيد البيانات وعمل السحب 🎰</span>
+                <Gift size={18}/>
+                {isSpinning ? 'جاري السحب...' : 'تأكيد البيانات وعمل السحب 🎰'}
               </button>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
+
       </div>
+
+      {/* ── WIN MODAL ── */}
+      {showWinModal && (
+        <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.78)', backdropFilter:'blur(12px)', padding:'20px' }}>
+          <div className="modal-in" style={{
+            background:'linear-gradient(155deg,#2e2010 0%,#241808 55%,#1c1408 100%)',
+            border:'1px solid rgba(212,175,55,0.45)',
+            borderRadius:'28px', padding:'clamp(24px,5vw,44px)',
+            maxWidth:'460px', width:'100%', textAlign:'center',
+            boxShadow:'0 40px 100px rgba(0,0,0,0.85), 0 0 80px rgba(212,175,55,0.15)',
+            position:'relative', overflow:'hidden',
+          }} dir="rtl">
+
+            <div style={{ position:'absolute', top:0, left:'50%', transform:'translateX(-50%)', width:'200px', height:'2.5px', background:'linear-gradient(90deg,transparent,#d4af37,transparent)', borderRadius:'2px' }}/>
+            <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse at 50% 0%,rgba(212,175,55,0.12) 0%,transparent 55%)', pointerEvents:'none' }}/>
+
+            <div className="shimmer-text" style={{ fontFamily:'"Playfair Display",serif', fontSize:'1.15rem', fontWeight:900, letterSpacing:'0.08em', marginBottom:'18px' }}>
+              Angel Perfum
+            </div>
+
+            <div style={{ position:'relative', width:'90px', height:'90px', margin:'0 auto 20px', borderRadius:'50%', background:'linear-gradient(145deg,#fff8e1 0%,#fde8a0 25%,#d4af37 60%,#7a5c1a 100%)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 55px rgba(212,175,55,0.7)' }}>
+              <Gift size={40} style={{ color:'#1a1208', filter:'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}/>
+              <div className="ring-out" style={{ position:'absolute', inset:'-8px', borderRadius:'50%', border:'2px solid rgba(212,175,55,0.55)' }}/>
+              <div className="ring-out" style={{ position:'absolute', inset:'-8px', borderRadius:'50%', border:'2px solid rgba(212,175,55,0.3)', animationDelay:'0.7s' }}/>
+            </div>
+
+            <h2 style={{ fontFamily:'"Playfair Display",serif', fontSize:'clamp(1.2rem,4vw,1.5rem)', fontWeight:900, color:'#fff8e1', margin:'0 0 8px' }}>
+              🎉 تهانينا! فزت بـ
+            </h2>
+
+            <div style={{ background:'rgba(212,175,55,0.12)', border:'1.5px solid rgba(212,175,55,0.4)', borderRadius:'14px', padding:'16px', margin:'14px 0', fontFamily:'"Playfair Display",serif', fontSize:'clamp(1.1rem,4vw,1.5rem)', fontWeight:900, color:'#fff8e1', textShadow:'0 0 20px rgba(212,175,55,0.5)' }}>
+              {winningPrize?.label}
+            </div>
+
+            <div style={{ background:'rgba(255,245,220,0.05)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:'12px', padding:'14px', marginBottom:'18px', display:'flex', flexDirection:'column', gap:'10px' }}>
+              {[
+                { lbl:'اسم العميل',   val: customerName },
+                { lbl:'رقم الهاتف',  val: customerPhone },
+                { lbl:'العنوان',     val: customerAddress },
+                { lbl:'سعر الطلبية', val: customerPrice ? `${Number(customerPrice).toLocaleString('ar-EG')} JD` : '—' },
+              ].map(r => (
+                <div key={r.lbl} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:'8px', borderBottom:'1px solid rgba(212,175,55,0.08)', paddingBottom:'8px', fontSize:'0.83rem' }}>
+                  <span style={{ color:'rgba(212,175,55,0.65)', fontWeight:700, fontSize:'0.72rem' }}>{r.lbl}</span>
+                  <span style={{ color:'#fde8a0', fontWeight:800 }}>{r.val||'—'}</span>
+                </div>
+              ))}
+            </div>
+
+            <p style={{ fontSize:'0.74rem', color:'rgba(212,175,55,0.45)', marginBottom:'22px', lineHeight:1.7 }}>
+              تم حفظ هذه الجائزة بنجاح في سجلات النظام ✓
+            </p>
+
+            <button className="primary-btn" onClick={() => setShowWinModal(false)}>
+              <Check size={18}/> تأكيد واستلام الجائزة
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Footer ── */}
+      <footer style={{ marginTop:'50px', textAlign:'center', zIndex:10, paddingTop:'22px', width:'100%', maxWidth:'600px', borderTop:'1px solid rgba(212,175,55,0.15)' }}>
+        <div className="shimmer-text" style={{ fontFamily:'"Playfair Display",serif', fontSize:'1.05rem', fontWeight:900, letterSpacing:'0.09em', marginBottom:'5px' }}>
+          Angel Perfum
+        </div>
+        <div style={{ fontSize:'0.63rem', color:'rgba(212,175,55,0.4)', letterSpacing:'0.18em', textTransform:'uppercase' }}>
+          © 2026 — Luxury Fragrance &amp; Exclusive Gifts
+        </div>
+      </footer>
 
     </div>
   );
