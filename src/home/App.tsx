@@ -262,7 +262,13 @@ export default function App() {
     }
   };
 
-  const handleRecordWin = async (prizeLabel: string, valueAssumed: number, customerName?: string, customerPhone?: string) => {
+  const handleRecordWin = async (
+    prizeLabel: string,
+    valueAssumed: number,
+    customerName?: string,
+    customerPhone?: string,
+    customerAddress?: string
+  ) => {
     try {
       const winId = `win_${Date.now()}`;
       const currentUser = auth.currentUser;
@@ -277,7 +283,8 @@ export default function App() {
         valueAssumed,
         winDate: new Date().toLocaleString('ar-EG'),
         customerName: customerName || '',
-        customerPhone: customerPhone || ''
+        customerPhone: customerPhone || '',
+        customerAddress: customerAddress || '',
       };
 
       await setDoc(doc(db, 'wins', winId), winRecord);

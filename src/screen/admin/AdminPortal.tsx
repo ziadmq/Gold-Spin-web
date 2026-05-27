@@ -50,7 +50,7 @@ export default function AdminPortal({
   const [prizeCost, setPrizeCost] = useState<number>(100);
 
   const [msgTemplate, setMsgTemplate] = useState<string>(
-    'مرحباً {customer_name}! مبروك فوزك بـ {prize_name} بقيمة {prize_value}$ في سحب Gold Spin! تفاصيل جائزتك جاهزة للاستلام لدى الفرع.'
+    'مرحباً {customer_name}! مبروك فوزك بـ {prize_name} بقيمة {prize_value}$ في سحب angel perfum! تفاصيل جائزتك جاهزة للاستلام لدى الفرع.'
   );
   const [successSentMsg, setSuccessSentMsg] = useState<string | null>(null);
 
@@ -119,7 +119,7 @@ export default function AdminPortal({
   };
 
   const handleGenerateReport = () => {
-    setReportSuccessMsg('تم توليد التقرير السنوي الشامل بنجاح لحساب Gold Spin.');
+    setReportSuccessMsg('تم توليد التقرير السنوي الشامل بنجاح لحساب angel perfum.');
     setTimeout(() => {
       setReportSuccessMsg('');
     }, 4000);
@@ -147,7 +147,7 @@ export default function AdminPortal({
           {/* Logo Brand Header */}
           <div className="px-2 pb-2 flex items-center justify-between lg:block">
             <div className="text-right">
-              <h1 className="font-serif text-3xl font-bold text-[#775a19] tracking-tight">Gold Spin</h1>
+              <h1 className="font-serif text-3xl font-bold text-[#775a19] tracking-tight">angel perfum</h1>
               <p className="text-[10px] font-sans text-[#4e4639] tracking-wider opacity-70 font-semibold uppercase select-none">Admin Portal</p>
             </div>
             <button
@@ -236,7 +236,7 @@ export default function AdminPortal({
           <div className="flex items-center justify-end gap-3 px-2">
             <div>
               <p className="text-xs font-bold text-[#1a1c1c]">مسؤول النظام</p>
-              <p className="text-[10px] text-[#4e4639] font-medium opacity-70">إدارة Gold Spin</p>
+              <p className="text-[10px] text-[#4e4639] font-medium opacity-70">إدارة angel perfum</p>
             </div>
             <div className="w-10 h-10 rounded-full bg-[#c5a059] flex items-center justify-center text-white font-serif text-base font-bold">A</div>
           </div>
@@ -1077,7 +1077,7 @@ export default function AdminPortal({
         <div className="flex flex-col md:flex-row gap-1 md:gap-4">
           <span className="text-[#4e4639] font-bold">الدعم والمساعدة هاتفياً: <span className="font-mono text-[#775a19] whitespace-nowrap">0777744189</span> أو <span className="font-mono text-[#775a19] whitespace-nowrap">0780090698</span></span>
         </div>
-        <p className="opacity-90">© 2026 Gold Spin. All rights reserved.</p>
+        <p className="opacity-90">© 2026 angel perfum. All rights reserved.</p>
       </footer>
 
     </div>

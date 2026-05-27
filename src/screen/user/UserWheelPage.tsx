@@ -5,7 +5,13 @@ import { Prize } from '../../types/types';
 interface UserWheelPageProps {
   prizes: Prize[];
   onLogout: () => void;
-  onRecordWin: (prizeLabel: string, valueAssumed: number, customerName?: string, customerPhone?: string) => void;
+  onRecordWin: (
+    prizeLabel: string,
+    valueAssumed: number,
+    customerName?: string,
+    customerPhone?: string,
+    customerAddress?: string
+  ) => void;
   onAdminLoginClick?: () => void;
   userDisplayName?: string;
   userEmail?: string;
@@ -24,12 +30,14 @@ export default function UserWheelPage({
   const [currentRotation, setCurrentRotation] = useState(0);
   const [showWinModal, setShowWinModal] = useState(false);
   const [winningPrize, setWinningPrize] = useState<Prize | null>(null);
+  const [winningValueAssumed, setWinningValueAssumed] = useState<number>(0);
   const [confetti, setConfetti] = useState<{ id: number; left: string; color: string; delay: string; duration: string; size: string }[]>([]);
 
   // Customer information collection states
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
   const [customerError, setCustomerError] = useState('');
 
   const [spinDuration, setSpinDuration] = useState(() => {
@@ -65,8 +73,10 @@ export default function UserWheelPage({
 
     if (numSlices === 0) {
       ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = '#0b0b0b';
+      ctx.fillRect(0, 0, width, height);
       ctx.font = '20px sans-serif';
-      ctx.fillStyle = '#775a19';
+      ctx.fillStyle = '#d4af37';
       ctx.textAlign = 'center';
       ctx.fillText('لا توجد جوائز نشطة حالياً', centerX, centerY);
       return;
@@ -75,6 +85,20 @@ export default function UserWheelPage({
     const sliceAngle = (2 * Math.PI) / numSlices;
 
     ctx.clearRect(0, 0, width, height);
+    // Wheel background: black + subtle gold glow
+    ctx.save();
+    ctx.fillStyle = '#0b0b0b';
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.shadowColor = 'rgba(212,175,55,0.22)';
+    ctx.shadowBlur = 18;
+    ctx.strokeStyle = '#d4af37';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.restore();
 
     activePrizes.forEach((prize, i) => {
       const angle = i * sliceAngle;
@@ -85,8 +109,8 @@ export default function UserWheelPage({
       ctx.fillStyle = prize.color;
       ctx.fill();
 
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = '#c5a059';
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#000000';
       ctx.stroke();
 
       ctx.save();
@@ -94,7 +118,7 @@ export default function UserWheelPage({
       ctx.rotate(angle + sliceAngle / 2);
       ctx.textAlign = 'right';
       
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#d4af37';
       
       ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
       ctx.shadowBlur = 6;
@@ -107,10 +131,29 @@ export default function UserWheelPage({
       ctx.restore();
     });
 
+    // Outer rings: black + gold
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = '#775a19';
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = '#000000';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius - 8, 0, 2 * Math.PI);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#d4af37';
+    ctx.stroke();
+
+    // Center hub (gold ring over black)
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 20, 0, 2 * Math.PI);
+    ctx.fillStyle = '#000000';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 14, 0, 2 * Math.PI);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#d4af37';
     ctx.stroke();
   };
 
@@ -128,6 +171,10 @@ export default function UserWheelPage({
     }
     if (!customerPhone.trim() || customerPhone.trim().length < 6) {
       setCustomerError('الرجاء إدخال رقم هاتف صحيح للعميل (6 أرقام على الأقل).');
+      return;
+    }
+    if (!customerAddress.trim() || customerAddress.trim().length < 5) {
+      setCustomerError('الرجاء إدخال عنوان العميل (5 أحرف على الأقل).');
       return;
     }
     setCustomerError('');
@@ -176,7 +223,6 @@ export default function UserWheelPage({
 
     setTimeout(() => {
       setIsSpinning(false);
-      setShowWinModal(true);
       generateConfetti();
       
       let assumedValue = prize.cost ?? 50;
@@ -193,7 +239,9 @@ export default function UserWheelPage({
         }
       }
       
-      onRecordWin(prize.label, assumedValue, customerName, customerPhone);
+      setWinningValueAssumed(assumedValue);
+      setShowWinModal(true);
+      onRecordWin(prize.label, assumedValue, customerName, customerPhone, customerAddress);
     }, actualDurationMs);
   };
 
@@ -214,9 +262,11 @@ export default function UserWheelPage({
     setCurrentRotation(0);
     setShowWinModal(false);
     setWinningPrize(null);
+    setWinningValueAssumed(0);
     setConfetti([]);
     setCustomerName('');
     setCustomerPhone('');
+    setCustomerAddress('');
   };
 
   return (
@@ -226,7 +276,7 @@ export default function UserWheelPage({
       <nav className="bg-white/80 backdrop-blur-md fixed top-0 w-full z-45 h-20 shadow-[0px_4px_20px_rgba(197,160,89,0.08)] border-b border-[#F4EBD0]/50" dir="rtl">
         <div className="flex justify-between items-center w-full px-6 md:px-16 max-w-7xl mx-auto h-full">
           {/* Logo on the right for RTL layout */}
-          <div className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-[#775a19] select-none">Gold Spin</div>
+          <div className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-[#d4af37] select-none">angel perfum</div>
 
           {/* User Display: Display name of the user using my program in above */}
           <div className="flex items-center gap-2 sm:gap-4">
@@ -299,7 +349,7 @@ export default function UserWheelPage({
           </div>
 
           {/* Sizing Wrapper */}
-          <div className="relative w-[340px] h-[340px] xs:w-[410px] xs:h-[410px] sm:w-[480px] sm:h-[480px] md:w-[500px] md:h-[500px] rounded-full border-12 border-[#ffdea5]/25 p-2 wheel-shadow bg-[#ffffff] flex items-center justify-center transition-all">
+          <div className="relative w-[340px] h-[340px] xs:w-[410px] xs:h-[410px] sm:w-[480px] sm:h-[480px] md:w-[500px] md:h-[500px] rounded-full border-12 border-[#d4af37]/25 p-2 wheel-shadow bg-[#0b0b0b] flex items-center justify-center transition-all">
             
             {/* Rotating Container */}
             <div
@@ -308,7 +358,7 @@ export default function UserWheelPage({
                 transform: `rotate(${currentRotation}deg)`,
                 transition: isSpinning ? `transform ${spinDuration}s cubic-bezier(0.15, 0, 0.1, 1)` : 'none',
               }}
-              className="relative w-full h-full rounded-full overflow-hidden border-2 border-[#775a19]"
+              className="relative w-full h-full rounded-full overflow-hidden border-2 border-[#d4af37]/60"
             >
               <canvas
                 ref={canvasRef}
@@ -350,6 +400,10 @@ export default function UserWheelPage({
             showWinModal ? 'scale-100 translate-y-0' : 'scale-90 translate-y-12'
           }`}
         >
+          <div className="font-serif text-xl font-extrabold text-[#775a19] mb-3 tracking-wide select-none">
+            angel perfum
+          </div>
+
           <div className="w-20 h-20 gold-gradient rounded-full flex items-center justify-center mx-auto mb-6 shadow-md shadow-[#775a19]/20 relative">
             <Gift className="w-10 h-10 text-white animate-bounce" />
             <div className="absolute inset-0 rounded-full border border-white/50 animate-ping opacity-35" />
@@ -359,6 +413,28 @@ export default function UserWheelPage({
           
           <div className="font-serif text-3xl font-extrabold text-[#1a1c1c] my-4 tracking-wide border-y border-[#F4EBD0]/80 py-3 bg-[#fbfbf9]">
             {winningPrize?.label}
+          </div>
+
+          {/* Customer receipt details (stacked) */}
+          <div className="font-sans text-sm text-[#4e4639] leading-relaxed mb-6 space-y-2">
+            <div className="flex justify-between items-center gap-4">
+              <span className="text-[11px] font-bold text-[#775a19]">اسم العميل</span>
+              <span className="font-extrabold">{customerName || '—'}</span>
+            </div>
+            <div className="flex justify-between items-center gap-4">
+              <span className="text-[11px] font-bold text-[#775a19]">رقم تلفون العميل</span>
+              <span className="font-extrabold">{customerPhone || '—'}</span>
+            </div>
+            <div className="flex justify-between items-start gap-4">
+              <span className="text-[11px] font-bold text-[#775a19]">عنوان العميل</span>
+              <span className="font-extrabold text-right">{customerAddress || '—'}</span>
+            </div>
+            <div className="flex justify-between items-center gap-4">
+              <span className="text-[11px] font-bold text-[#775a19]">قيمة الطلبيه</span>
+              <span className="font-extrabold">
+                ${(winningValueAssumed || 0).toLocaleString('ar-EG')}
+              </span>
+            </div>
           </div>
 
           <p className="font-sans text-sm text-[#4e4639] leading-relaxed mb-8">
@@ -408,7 +484,7 @@ export default function UserWheelPage({
 
           <form onSubmit={handleConfirmCustomerDetails} className="space-y-4">
             <div className="bg-[#775a19]/5 border border-[#c5a059]/20 p-3.5 rounded-xl text-xs text-[#775a19] font-medium leading-relaxed mb-4">
-              ✨ يرجى إدخال اسم ورقم هاتف العميل لتتمكن من تدوير عجلة الجوائز. سيتم ربط الجائزة ببياناته وتوثيقها في لوحة التحكم تلقائياً.
+              ✨ يرجى إدخال اسم ورقم هاتف وعنوان العميل لتتمكن من تدوير عجلة الجوائز. سيتم ربط الجائزة ببياناته وتوثيقها في لوحة التحكم تلقائياً.
             </div>
 
             <div>
@@ -431,6 +507,18 @@ export default function UserWheelPage({
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
                 className="w-full text-sm font-semibold p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#775a19]/30 focus:bg-white transition-all text-right"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1.5 text-right">عنوان العميل *</label>
+              <textarea
+                required
+                rows={3}
+                placeholder="اكتب عنوان العميل (المنطقة/الشارع ...)"
+                value={customerAddress}
+                onChange={(e) => setCustomerAddress(e.target.value)}
+                className="w-full text-sm font-semibold p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#775a19]/30 focus:bg-white transition-all text-right resize-none"
               />
             </div>
 

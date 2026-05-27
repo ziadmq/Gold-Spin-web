@@ -266,7 +266,7 @@ export default function AuthPage({ onLoginSuccess, onRequestAccess, onBackToWhee
           <div className="mb-3 sm:mb-4 p-3 sm:p-4 rounded-full bg-gradient-to-b from-[#775a19]/15 to-transparent border border-[#775a19]/25 flex items-center justify-center">
             <Gift className="text-[#775a19] w-10 h-10 sm:w-12 sm:h-12 animate-bounce" style={{ animationDuration: '3.5s' }} />
           </div>
-          <h1 className="font-serif text-3xl sm:text-4xl text-[#775a19] font-extrabold tracking-wider">Gold Spin</h1>
+          <h1 className="font-serif text-3xl sm:text-4xl text-[#775a19] font-extrabold tracking-wider">angel perfum</h1>
         </div>
 
         {/* Content Area */}
@@ -311,7 +311,7 @@ export default function AuthPage({ onLoginSuccess, onRequestAccess, onBackToWhee
                   <h3 className="font-serif text-xl sm:text-2xl text-red-700 font-bold">تم رفض طلب الدخول</h3>
                   <p className="font-sans text-xs sm:text-sm text-[#1a1c1c] font-semibold">الحساب: {selectedGoogleEmail}</p>
                   <p className="text-[11px] sm:text-xs text-[#4e4639] leading-relaxed max-w-xs opacity-90 mx-auto">
-                    تم رفض هذا الطلب بواسطة المسؤول. يرجى التواصل مع إدارة Gold Spin للحصول على الموافقة اليدوية وتحديث الصلاحية.
+                    تم رفض هذا الطلب بواسطة المسؤول. يرجى التواصل مع إدارة angel perfum للحصول على الموافقة اليدوية وتحديث الصلاحية.
                   </p>
                   <button
                     onClick={resetForm}
@@ -373,7 +373,7 @@ export default function AuthPage({ onLoginSuccess, onRequestAccess, onBackToWhee
 
         {/* Footer Info */}
         <footer className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-[#e2e2e2]/40 flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#4e4639]/70 gap-2 select-none">
-          <p className="font-sans">© 2026 Gold Spin Concierge</p>
+          <p className="font-sans">© 2026 angel perfum Concierge</p>
           <div className="flex gap-4">
             <button
               onClick={() => setActiveDialog('support')}

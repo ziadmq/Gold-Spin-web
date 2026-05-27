@@ -34,4 +34,5 @@ export interface WinRecord {
   winDate: string;
   customerName?: string;
   customerPhone?: string;
+  customerAddress?: string;
 }
