@@ -1077,7 +1077,7 @@ export default function AdminPortal({
         <div className="flex flex-col md:flex-row gap-1 md:gap-4">
           <span className="text-[#4e4639] font-bold">الدعم والمساعدة هاتفياً: <span className="font-mono text-[#775a19] whitespace-nowrap">0777744189</span> أو <span className="font-mono text-[#775a19] whitespace-nowrap">0780090698</span></span>
         </div>
-        <p className="opacity-90">© 2024 Gold Spin. All rights reserved.</p>
+        <p className="opacity-90">© 2026 Gold Spin. All rights reserved.</p>
       </footer>
 
     </div>

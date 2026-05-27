@@ -71,7 +71,7 @@ export default function AuthPage({ onLoginSuccess, onRequestAccess, onBackToWhee
     setAuthErrorMessage('');
     setIframeErrorOccurred(false);
 
-    if (email === 'kafehazyad5@gmail.com') {
+    if (email === 'Sbeihmorad07@gmail.com') {
       setGoogleAccountStatus('approved');
       setTimeout(() => {
         onLoginSuccess('admin');
@@ -138,7 +138,7 @@ export default function AuthPage({ onLoginSuccess, onRequestAccess, onBackToWhee
     try {
       setIsSubmitted(true);
       setIframeErrorOccurred(false);
-      localStorage.setItem('bypass_email', 'kafehazyad5@gmail.com');
+      localStorage.setItem('bypass_email', 'Sbeihmorad07@gmail.com');
       localStorage.setItem('bypass_name', 'مسؤول النظام (معاينة)');
       
       await signInAnonymously(auth);

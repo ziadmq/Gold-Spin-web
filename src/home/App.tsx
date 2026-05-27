@@ -109,7 +109,7 @@ export default function App() {
 
         const email = firebaseUser.email?.trim().toLowerCase() || localStorage.getItem('bypass_email') || '';
 
-        if (email === 'kafehazyad5@gmail.com') {
+        if (email === 'Sbeihmorad07@gmail.com') {
           unsubWins = onSnapshot(collection(db, 'wins'), (snapshot) => {
             const list = snapshot.docs.map(changeDoc => changeDoc.data() as WinRecord);
             list.sort((a, b) => b.id.localeCompare(a.id));
@@ -138,7 +138,7 @@ export default function App() {
           });
         }
 
-        if (email === 'kafehazyad5@gmail.com') {
+        if (email === 'Sbeihmorad07@gmail.com') {
           setCurrentRole('admin');
           unsubRequests = onSnapshot(collection(db, 'accessRequests'), (snapshot) => {
             const list = snapshot.docs.map(changeDoc => changeDoc.data() as AccessRequest);

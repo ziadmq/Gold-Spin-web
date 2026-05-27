@@ -22,7 +22,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
-        getEmail() == 'kafehazyad5@gmail.com' ||
+        getEmail() == 'Sbeihmorad07@gmail.com' ||
         getEmail() == null
       );
     }
