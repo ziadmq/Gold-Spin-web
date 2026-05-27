@@ -19,6 +19,7 @@ interface AdminPortalProps {
   totalStats: { totalDistributed: number };
   wins: WinRecord[];
   onDeleteWin: (id: string, valueAssumed: number) => void;
+  onGoToWheel?: () => void;
 }
 
 export default function AdminPortal({
@@ -32,7 +33,8 @@ export default function AdminPortal({
   onLogout,
   totalStats,
   wins = [],
-  onDeleteWin
+  onDeleteWin,
+  onGoToWheel
 }: AdminPortalProps) {
   const [activeTab, setActiveTab] = useState<'prizes' | 'dashboard' | 'access' | 'settings'>('prizes');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -228,6 +230,17 @@ export default function AdminPortal({
               <span>الإعدادات</span>
               <SettingsIcon className="w-4.5 h-4.5" />
             </button>
+
+            {/* Go to Wheel Link */}
+            {onGoToWheel && (
+              <button
+                onClick={onGoToWheel}
+                className="w-full mt-4 flex items-center justify-end gap-3 p-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+              >
+                <span>فتح عجلة الحظ</span>
+                <RefreshCw className="w-4.5 h-4.5" />
+              </button>
+            )}
           </nav>
         </div>
 

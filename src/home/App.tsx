@@ -355,6 +355,7 @@ export default function App() {
             onUpdateAccessRequest={handleUpdateAccessRequest}
             onDeleteAccessRequest={handleDeleteAccessRequest}
             onLogout={handleLogout}
+            onGoToWheel={() => setCurrentRole('user')}
             totalStats={{ totalDistributed }}
             wins={wins}
             onDeleteWin={handleDeleteWin}

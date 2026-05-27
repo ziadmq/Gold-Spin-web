@@ -563,16 +563,26 @@ export default function UserWheelPage({
       <div style={{ zIndex:10, width:'100%', maxWidth:'960px', display:'flex', flexDirection:'column', alignItems:'center', gap:'32px', padding:'0 20px' }}>
 
         {/* Heading */}
-        <div className="fade-in-up" style={{ textAlign:'center' }}>
+        <div className="fade-in-up" style={{ textAlign:'center', width:'100%', maxWidth:'600px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', marginBottom:'10px' }}>
             <Star size={14} style={{ color:'#d4af37' }}/>
             <span style={{ fontSize:'0.68rem', letterSpacing:'0.28em', textTransform:'uppercase', color:'rgba(212,175,55,0.65)', fontWeight:700 }}>عجلة الجوائز الفاخرة</span>
             <Star size={14} style={{ color:'#d4af37' }}/>
           </div>
-          <h1 style={{ fontFamily:'"Playfair Display",serif', fontSize:'clamp(1.5rem,5vw,2.6rem)', fontWeight:900, color:'#fff8e1', letterSpacing:'0.02em', lineHeight:1.2, margin:0, textShadow:'0 2px 20px rgba(212,175,55,0.3)' }}>
-            ادور واربح هديتك المميزة 🎁
-          </h1>
-          <div style={{ height:'1.5px', width:'140px', background:'linear-gradient(90deg,transparent,#d4af37,transparent)', margin:'14px auto 0', borderRadius:'2px' }}/>
+          
+          {/* Title */}
+          <div style={{ margin: '14px 0', textAlign: 'center', width: '100%', padding: '0 10px' }}>
+            <h1 className="shimmer-text" style={{ fontFamily:'"Playfair Display",serif', fontSize:'clamp(1.6rem, 5vw, 2.5rem)', fontWeight:900, letterSpacing:'0.04em', lineHeight:1.4, margin:0, textShadow:'0 2px 20px rgba(212,175,55,0.4)', textTransform:'capitalize' }} dir="rtl">
+              أهلاً بكم في Angel Perfum
+            </h1>
+          </div>
+          
+          <div style={{ height:'1.5px', width:'140px', background:'linear-gradient(90deg,transparent,#d4af37,transparent)', margin:'14px auto 14px', borderRadius:'2px' }}/>
+          
+          <h2 style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', fontFamily:'"Hanken Grotesk", "Segoe UI", sans-serif', fontSize:'clamp(1.1rem, 4vw, 1.4rem)', fontWeight:800, color:'#fde8a0', margin:0, letterSpacing:'0.02em', textShadow:'0 2px 10px rgba(0,0,0,0.5)' }}>
+            <span>دور واربح هديتك</span>
+            <span>🎁</span>
+          </h2>
         </div>
 
         {/* ── WHEEL ── */}
@@ -628,6 +638,30 @@ export default function UserWheelPage({
 
                   {/* Glass shine */}
                   <div style={{ position:'absolute', inset:0, borderRadius:'50%', background:'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.1) 0%, transparent 55%)', pointerEvents:'none' }}/>
+
+                  {/* Center Spin Button Overlay */}
+                  <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%, -50%)', zIndex:50 }}>
+                    <button
+                      type="button"
+                      onClick={handleSpinClick}
+                      disabled={isSpinning}
+                      style={{
+                        width:'86px', height:'86px', borderRadius:'50%',
+                        background:'linear-gradient(135deg, #fde8a0 0%, #d4af37 50%, #7a5c1a 100%)',
+                        border:'3px solid #1e1810',
+                        boxShadow:'0 0 30px rgba(0,0,0,0.8), inset 0 2px 10px rgba(255,255,255,0.4)',
+                        display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                        color:'#1a130a', fontWeight:900, fontSize:'0.9rem', cursor: isSpinning ? 'not-allowed' : 'pointer',
+                        padding:0, opacity: isSpinning ? 0.8 : 1, transition:'all 0.2s',
+                        fontFamily:'"Hanken Grotesk", sans-serif'
+                      }}
+                      onMouseOver={(e) => { if(!isSpinning) e.currentTarget.style.transform = 'scale(1.05)'; }}
+                      onMouseOut={(e) => { if(!isSpinning) e.currentTarget.style.transform = 'scale(1)'; }}
+                    >
+                      <Gift size={22} style={{ marginBottom:'2px' }}/>
+                      سحب
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -642,7 +676,7 @@ export default function UserWheelPage({
                   <Sparkles size={15} style={{ color:'#d4af37' }}/>
                 </div>
               : <span style={{ color:'rgba(212,175,55,0.65)', fontSize:'0.82rem', fontWeight:600 }}>
-                  أدخل بيانات العميل واضغط على تأكيد للسحب 🎰
+                  أدخل بيانات العميل واضغط على زر السحب في المنتصف 🎰
                 </span>
             }
           </div>
@@ -731,7 +765,7 @@ export default function UserWheelPage({
                 {/* Price */}
                 <div>
                   <label style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'0.71rem', fontWeight:700, color:'rgba(212,175,55,0.75)', marginBottom:'8px', letterSpacing:'0.05em' }}>
-                    <span>💰</span> سعر الطلبية *
+                    <span>💰</span> التكلفة *
                   </label>
                   <div style={{ position:'relative' }}>
                     <input
@@ -761,16 +795,6 @@ export default function UserWheelPage({
                 </div>
               )}
 
-              {/* Spin button */}
-              <button
-                type="submit"
-                disabled={isSpinning}
-                className="primary-btn"
-                style={{ opacity: isSpinning ? 0.7 : 1, cursor: isSpinning ? 'not-allowed' : 'pointer' }}
-              >
-                <Gift size={18}/>
-                {isSpinning ? 'جاري السحب...' : 'تأكيد البيانات وعمل السحب 🎰'}
-              </button>
             </form>
           </div>
         </div>
