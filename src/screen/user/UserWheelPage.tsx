@@ -48,8 +48,7 @@ export default function UserWheelPage({
 
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
-  const [customerPrice, setCustomerPrice] = useState('');
+  const [customerPrice, setCustomerPrice] = useState<string>('');
   const [customerError, setCustomerError] = useState('');
 
   const [spinDuration] = useState(() => {
@@ -251,12 +250,8 @@ export default function UserWheelPage({
       setCustomerError('الرجاء إدخال رقم هاتف صحيح (6 أرقام على الأقل).');
       return;
     }
-    if (!customerAddress.trim() || customerAddress.trim().length < 5) {
-      setCustomerError('الرجاء إدخال عنوان صحيح (5 أحرف على الأقل).');
-      return;
-    }
-    if (!customerPrice.trim() || isNaN(Number(customerPrice)) || Number(customerPrice) <= 0) {
-      setCustomerError('الرجاء إدخال سعر صحيح (رقم موجب).');
+    if (!customerPrice.trim() || isNaN(Number(customerPrice)) || Number(customerPrice) < 0) {
+      setCustomerError('الرجاء إدخال تكلفة الهدية (رقم صحيح).');
       return;
     }
     setCustomerError('');
@@ -299,7 +294,7 @@ export default function UserWheelPage({
       }
       setWinningValueAssumed(val);
       setShowWinModal(true);
-      onRecordWin(prize.label, val, customerName, customerPhone, customerAddress);
+      onRecordWin(prize.label, val, customerName, customerPhone);
     }, Math.round(spinDuration * 1000));
   };
 
@@ -748,19 +743,6 @@ export default function UserWheelPage({
                   />
                 </div>
 
-                {/* Address */}
-                <div>
-                  <label style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'0.71rem', fontWeight:700, color:'rgba(212,175,55,0.75)', marginBottom:'8px', letterSpacing:'0.05em' }}>
-                    <span>📍</span> عنوان العميل *
-                  </label>
-                  <input
-                    className="gold-input"
-                    type="text"
-                    placeholder="المنطقة / الشارع..."
-                    value={customerAddress}
-                    onChange={e => { setCustomerAddress(e.target.value); setCustomerError(''); }}
-                  />
-                </div>
 
                 {/* Price */}
                 <div>
