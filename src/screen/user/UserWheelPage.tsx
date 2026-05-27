@@ -779,54 +779,34 @@ export default function UserWheelPage({
 
       {/* ── WIN MODAL ── */}
       {showWinModal && (
-        <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.78)', backdropFilter:'blur(12px)', padding:'20px' }}>
+        <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.85)', backdropFilter:'blur(12px)', padding:'20px' }}>
           <div className="modal-in" style={{
-            background:'linear-gradient(155deg,#2e2010 0%,#241808 55%,#1c1408 100%)',
-            border:'1px solid rgba(212,175,55,0.45)',
-            borderRadius:'28px', padding:'clamp(24px,5vw,44px)',
-            maxWidth:'460px', width:'100%', textAlign:'center',
-            boxShadow:'0 40px 100px rgba(0,0,0,0.85), 0 0 80px rgba(212,175,55,0.15)',
+            background:'#1f160a',
+            border:'1px solid rgba(212,175,55,0.35)',
+            borderRadius:'24px', padding:'clamp(24px,5vw,40px)',
+            maxWidth:'440px', width:'100%', textAlign:'center',
+            boxShadow:'0 40px 100px rgba(0,0,0,0.9), 0 0 60px rgba(212,175,55,0.1)',
             position:'relative', overflow:'hidden',
           }} dir="rtl">
 
-            <div style={{ position:'absolute', top:0, left:'50%', transform:'translateX(-50%)', width:'200px', height:'2.5px', background:'linear-gradient(90deg,transparent,#d4af37,transparent)', borderRadius:'2px' }}/>
-            <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse at 50% 0%,rgba(212,175,55,0.12) 0%,transparent 55%)', pointerEvents:'none' }}/>
+            {/* Top gold glowing edge */}
+            <div style={{ position:'absolute', top:0, left:'50%', transform:'translateX(-50%)', width:'60%', height:'2px', background:'linear-gradient(90deg,transparent,#d4af37,transparent)', borderRadius:'2px', boxShadow:'0 2px 15px #d4af37' }}/>
+            <div style={{ position:'absolute', top:0, left:'50%', transform:'translateX(-50%)', width:'100%', height:'80px', background:'radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.15) 0%, transparent 70%)', pointerEvents:'none' }}/>
 
-            <div className="shimmer-text" style={{ fontFamily:'"Playfair Display",serif', fontSize:'1.15rem', fontWeight:900, letterSpacing:'0.08em', marginBottom:'18px' }}>
+            <div className="shimmer-text" style={{ fontFamily:'"Playfair Display",serif', fontSize:'1.25rem', fontWeight:900, letterSpacing:'0.06em', marginBottom:'24px' }}>
               Angel Perfum
             </div>
 
-            <div style={{ position:'relative', width:'90px', height:'90px', margin:'0 auto 20px', borderRadius:'50%', background:'linear-gradient(145deg,#fff8e1 0%,#fde8a0 25%,#d4af37 60%,#7a5c1a 100%)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 55px rgba(212,175,55,0.7)' }}>
-              <Gift size={40} style={{ color:'#1a1208', filter:'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}/>
-              <div className="ring-out" style={{ position:'absolute', inset:'-8px', borderRadius:'50%', border:'2px solid rgba(212,175,55,0.55)' }}/>
-              <div className="ring-out" style={{ position:'absolute', inset:'-8px', borderRadius:'50%', border:'2px solid rgba(212,175,55,0.3)', animationDelay:'0.7s' }}/>
-            </div>
-
-            <h2 style={{ fontFamily:'"Playfair Display",serif', fontSize:'clamp(1.2rem,4vw,1.5rem)', fontWeight:900, color:'#fff8e1', margin:'0 0 8px' }}>
-              🎉 تهانينا! فزت بـ
+            <h2 style={{ fontFamily:'"Playfair Display",serif', fontSize:'clamp(1.1rem,4vw,1.4rem)', fontWeight:900, color:'#fff8e1', margin:'0 0 16px' }}>
+              تهانينا! فزت بـ 🎉
             </h2>
 
-            <div style={{ background:'rgba(212,175,55,0.12)', border:'1.5px solid rgba(212,175,55,0.4)', borderRadius:'14px', padding:'16px', margin:'14px 0', fontFamily:'"Playfair Display",serif', fontSize:'clamp(1.1rem,4vw,1.5rem)', fontWeight:900, color:'#fff8e1', textShadow:'0 0 20px rgba(212,175,55,0.5)' }}>
+            {/* Clean prize name box */}
+            <div style={{ background:'rgba(0,0,0,0.3)', border:'1px solid rgba(212,175,55,0.5)', borderRadius:'12px', padding:'16px', margin:'0 0 24px 0', fontFamily:'"Playfair Display",serif', fontSize:'clamp(1.2rem,4vw,1.6rem)', fontWeight:900, color:'#ffffff' }}>
               {winningPrize?.label}
             </div>
 
-            <div style={{ background:'rgba(255,245,220,0.05)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:'12px', padding:'14px', marginBottom:'18px', display:'flex', flexDirection:'column', gap:'10px' }}>
-              {[
-                { lbl:'اسم العميل',   val: customerName },
-                { lbl:'رقم الهاتف',  val: customerPhone },
-                { lbl:'العنوان',     val: customerAddress },
-                { lbl:'سعر الطلبية', val: customerPrice ? `${Number(customerPrice).toLocaleString('ar-EG')} JD` : '—' },
-              ].map(r => (
-                <div key={r.lbl} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:'8px', borderBottom:'1px solid rgba(212,175,55,0.08)', paddingBottom:'8px', fontSize:'0.83rem' }}>
-                  <span style={{ color:'rgba(212,175,55,0.65)', fontWeight:700, fontSize:'0.72rem' }}>{r.lbl}</span>
-                  <span style={{ color:'#fde8a0', fontWeight:800 }}>{r.val||'—'}</span>
-                </div>
-              ))}
-            </div>
 
-            <p style={{ fontSize:'0.74rem', color:'rgba(212,175,55,0.45)', marginBottom:'22px', lineHeight:1.7 }}>
-              تم حفظ هذه الجائزة بنجاح في سجلات النظام ✓
-            </p>
 
             <button className="primary-btn" onClick={() => setShowWinModal(false)}>
               <Check size={18}/> تأكيد واستلام الجائزة
