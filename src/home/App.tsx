@@ -14,7 +14,11 @@ const defaultPrizes: Prize[] = [
 
 const defaultRequests: AccessRequest[] = [];
 export default function App() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    if (sessionStorage.getItem('splash_shown')) return false;
+    sessionStorage.setItem('splash_shown', 'true');
+    return true;
+  });
   const [prizes, setPrizes] = useState<Prize[]>(defaultPrizes);
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>(defaultRequests);
   const [wins, setWins] = useState<WinRecord[]>([]);
@@ -98,7 +102,7 @@ export default function App() {
 
         const email = firebaseUser.email?.trim().toLowerCase() || localStorage.getItem('bypass_email') || '';
 
-        if (email === 'sbeihmorad07@gmail.com') {
+        if (email === 'sbeihmorad07@gmail.com' || email === 'kafehazyad5@gmail.com') {
           unsubWins = onSnapshot(collection(db, 'wins'), (snapshot) => {
             const list = snapshot.docs.map(changeDoc => changeDoc.data() as WinRecord);
             list.sort((a, b) => b.id.localeCompare(a.id));
@@ -127,7 +131,7 @@ export default function App() {
           });
         }
 
-        if (email === 'sbeihmorad07@gmail.com') {
+        if (email === 'sbeihmorad07@gmail.com' || email === 'kafehazyad5@gmail.com') {
           setCurrentRole('admin');
           unsubRequests = onSnapshot(collection(db, 'accessRequests'), (snapshot) => {
             const list = snapshot.docs.map(changeDoc => changeDoc.data() as AccessRequest);
@@ -282,8 +286,10 @@ export default function App() {
         totalDistributed: totalDistributed + valueAssumed,
         increasePercentage: 12.5
       });
-    } catch (error) {
+      console.log("Win recorded successfully!");
+    } catch (error: any) {
       console.error("Error saving win record to Firebase:", error);
+      alert("حدث خطأ أثناء حفظ الفوز في قاعدة البيانات: " + error.message);
     }
   };
 

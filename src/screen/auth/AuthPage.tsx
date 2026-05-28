@@ -71,7 +71,7 @@ export default function AuthPage({ onLoginSuccess, onRequestAccess, onBackToWhee
     setAuthErrorMessage('');
     setIframeErrorOccurred(false);
 
-    if (email === 'sbeihmorad07@gmail.com') {
+    if (email === 'sbeihmorad07@gmail.com' || email === 'kafehazyad5@gmail.com') {
       setGoogleAccountStatus('approved');
       setTimeout(() => {
         onLoginSuccess('admin');

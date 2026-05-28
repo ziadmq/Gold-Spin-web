@@ -36,6 +36,115 @@ export default function UserWheelPage({
   userDisplayName = 'عضو مميز',
 }: UserWheelPageProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const spinSoundRef = useRef<number | null>(null);
+  const pointerRef = useRef<HTMLDivElement | null>(null);
+
+  const getAudioCtx = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+    return audioCtxRef.current;
+  };
+
+  const playClick = (volume: number, pitch: number) => {
+    try {
+      const ctx = getAudioCtx();
+      const t = ctx.currentTime;
+
+      // Sharp click noise burst
+      const bufSize = ctx.sampleRate * 0.03;
+      const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize, 10);
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buf;
+
+      // Bandpass to make it sound like a peg click
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = pitch;
+      bp.Q.value = 5;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(volume, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+
+      noise.connect(bp);
+      bp.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(t);
+      noise.stop(t + 0.04);
+    } catch (e) { /* ignore */ }
+  };
+
+  const startSpinSound = (durationSec: number, segmentCount: number) => {
+    const totalClicks = segmentCount * 8; // multiple rotations worth of clicks
+    let click = 0;
+    const schedule = () => {
+      if (click >= totalClicks) return;
+      const progress = click / totalClicks;
+      // Interval: starts very fast (~30ms) and slows to (~250ms) using easing curve
+      const ease = progress * progress * progress;
+      const interval = 30 + ease * 280;
+      // Pitch varies slightly for realism
+      const pitch = 2800 + (Math.random() - 0.5) * 600;
+      // Volume fades slightly toward the end
+      const vol = 0.5 - progress * 0.25;
+      playClick(Math.max(vol, 0.08), pitch);
+      click++;
+      spinSoundRef.current = window.setTimeout(schedule, interval);
+    };
+    schedule();
+  };
+
+  const stopSpinSound = () => {
+    if (spinSoundRef.current) {
+      clearTimeout(spinSoundRef.current);
+      spinSoundRef.current = null;
+    }
+  };
+
+  const playWinSound = () => {
+    try {
+      const ctx = getAudioCtx();
+      const t = ctx.currentTime;
+      // Triumphant arpeggio
+      const notes = [440, 554, 659, 880, 1109, 1319];
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const start = t + i * 0.08;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.25, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.5);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 0.5);
+      });
+      // Sparkle shimmer
+      const shimmer = ctx.createOscillator();
+      const sGain = ctx.createGain();
+      shimmer.type = 'sine';
+      shimmer.frequency.setValueAtTime(2000, t + 0.5);
+      shimmer.frequency.exponentialRampToValueAtTime(4000, t + 1.2);
+      sGain.gain.setValueAtTime(0.08, t + 0.5);
+      sGain.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+      shimmer.connect(sGain);
+      sGain.connect(ctx.destination);
+      shimmer.start(t + 0.5);
+      shimmer.stop(t + 1.2);
+    } catch (e) { /* ignore */ }
+  };
+
   const [isSpinning, setIsSpinning] = useState(false);
   const [currentRotation, setCurrentRotation] = useState(0);
   const [showWinModal, setShowWinModal] = useState(false);
@@ -266,6 +375,7 @@ export default function UserWheelPage({
   const spinTheWheel = () => {
     if (isSpinning || activePrizes.length === 0) return;
     setIsSpinning(true);
+    startSpinSound(spinDuration, activePrizes.length);
 
     const eligible = activePrizes.filter(p => p.probability > 0);
     const pool = eligible.length > 0 ? eligible : activePrizes;
@@ -279,18 +389,26 @@ export default function UserWheelPage({
     setWinningPrize(prize);
 
     const deg = 360 / activePrizes.length;
-    const mid = idx * deg + deg / 2;
-    const offset = (270 - mid + 360) % 360;
+    // Segment i starts at i*deg (from 3 o'clock / 0°), center is at i*deg + deg/2
+    // The pointer starts at top (which is 270° in canvas coords, or -90°)
+    // To reach segment center: pointer needs to rotate from its start to the segment center
+    // segmentCenterAngle (from 3 o'clock) = idx * deg + deg / 2
+    // pointerStart (from 3 o'clock) = 270
+    // rotation needed = segmentCenterAngle - pointerStart (mod 360) but we go clockwise
+    const segmentCenter = idx * deg + deg / 2;
+    // How far clockwise from pointer's start (top=270°) to segment center
+    const targetAngle = (segmentCenter - 270 + 360) % 360;
     const spins = 360 * (7 + Math.floor(Math.random() * 5));
-    setCurrentRotation(prev => prev + spins + offset - (prev % 360));
+    setCurrentRotation(prev => prev + spins + targetAngle - (prev % 360));
 
     setTimeout(() => {
+      stopSpinSound();
       setIsSpinning(false);
       generateConfetti();
-      let val = prize.cost ?? 50;
-      if (!prize.cost && prize.label.includes('$')) {
-        const n = parseInt(prize.label.replace(/[^0-9]/g, ''));
-        if (!isNaN(n)) val = n;
+      playWinSound();
+      let val = Number(customerPrice);
+      if (isNaN(val) || val < 0) {
+        val = prize.cost ?? 50;
       }
       setWinningValueAssumed(val);
       setShowWinModal(true);
@@ -583,38 +701,18 @@ export default function UserWheelPage({
         {/* ── WHEEL ── */}
         <div style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center' }}>
 
-          {/* SVG Pointer */}
-          <div className="pointer-bob" style={{ position:'absolute', top:'-24px', left:'50%', zIndex:40, filter:'drop-shadow(0 8px 16px rgba(212,175,55,0.9))' }}>
-            <svg width="34" height="44" viewBox="0 0 34 44" fill="none">
-              <defs>
-                <linearGradient id="pgrd" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor="#fff8e1"/>
-                  <stop offset="35%"  stopColor="#fde8a0"/>
-                  <stop offset="70%"  stopColor="#d4af37"/>
-                  <stop offset="100%" stopColor="#7a5c1a"/>
-                </linearGradient>
-              </defs>
-              <polygon points="17,44 0,0 34,0" fill="url(#pgrd)"/>
-              <polygon points="17,44 0,0 34,0" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2"/>
-            </svg>
-          </div>
-
           {/* Outer glow rings */}
           <div style={{ position:'relative', display:'inline-flex', alignItems:'center', justifyContent:'center' }}>
-            {!isSpinning && <>
-              <div className="ring-out" style={{ position:'absolute', borderRadius:'50%', border:'2px solid rgba(212,175,55,0.4)', inset:'-12px', pointerEvents:'none' }}/>
-              <div className="ring-out" style={{ position:'absolute', borderRadius:'50%', border:'2px solid rgba(212,175,55,0.2)', inset:'-12px', animationDelay:'0.9s', pointerEvents:'none' }}/>
-            </>}
 
             {/* Conic gold border frame */}
-            <div style={{ borderRadius:'50%', padding:'6px', background:'conic-gradient(from 0deg,#7a5c1a,#d4af37,#fff8e1,#d4af37,#c9a84c,#d4af37,#fff8e1,#d4af37,#7a5c1a)', boxShadow:'0 0 50px rgba(212,175,55,0.4), 0 0 100px rgba(212,175,55,0.15)' }}>
+            <div style={{ borderRadius:'50%', padding:'0px', background:'conic-gradient(from 0deg,#7a5c1a,#d4af37,#fff8e1,#d4af37,#c9a84c,#d4af37,#fff8e1,#d4af37,#7a5c1a)', boxShadow:'0 0 50px rgba(212,175,55,0.4), 0 0 100px rgba(212,175,55,0.15)' }}>
 
               {/* Dark bezel */}
-              <div style={{ borderRadius:'50%', padding:'6px', background:'#1e1608', boxShadow:'inset 0 0 30px rgba(0,0,0,0.7)' }}>
+              <div style={{ borderRadius:'50%', padding:'0px', background:'transparent' }}>
 
-                {/* Wheel levitation wrapper */}
+                {/* Wheel wrapper */}
                 <div
-                  className={isSpinning?'':'levitate'}
+                  className=""
                   style={{
                     width:'clamp(300px,72vw,476px)',
                     height:'clamp(300px,72vw,476px)',
@@ -622,12 +720,8 @@ export default function UserWheelPage({
                     boxShadow:'inset 0 0 50px rgba(0,0,0,0.4)',
                   }}
                 >
-                  {/* Canvas */}
-                  <div style={{
-                    width:'100%', height:'100%',
-                    transform:`rotate(${currentRotation}deg)`,
-                    transition: isSpinning?`transform ${spinDuration}s cubic-bezier(0.12,0,0.08,1)`:'none',
-                  }}>
+                  {/* Canvas - STATIC, no rotation */}
+                  <div style={{ width:'100%', height:'100%' }}>
                     <canvas ref={canvasRef} width={500} height={500} style={{ width:'100%', height:'100%', display:'block' }}/>
                   </div>
 
@@ -658,6 +752,41 @@ export default function UserWheelPage({
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Rotating Pointer Overlay - spins around the wheel */}
+            <div
+              ref={pointerRef}
+              style={{
+                position:'absolute',
+                inset: 0,
+                zIndex: 40,
+                pointerEvents:'none',
+                transform:`rotate(${currentRotation}deg)`,
+                transition: isSpinning ? `transform ${spinDuration}s cubic-bezier(0.12,0,0.08,1)` : 'none',
+              }}
+            >
+              {/* Pointer at the top */}
+              <div style={{
+                position:'absolute',
+                top:'-20px',
+                left:'50%',
+                transform:'translateX(-50%)',
+                filter:'drop-shadow(0 8px 16px rgba(212,175,55,0.9))',
+              }}>
+                <svg width="34" height="44" viewBox="0 0 34 44" fill="none">
+                  <defs>
+                    <linearGradient id="pgrd" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%"   stopColor="#fff8e1"/>
+                      <stop offset="35%"  stopColor="#fde8a0"/>
+                      <stop offset="70%"  stopColor="#d4af37"/>
+                      <stop offset="100%" stopColor="#7a5c1a"/>
+                    </linearGradient>
+                  </defs>
+                  <polygon points="17,44 0,0 34,0" fill="url(#pgrd)"/>
+                  <polygon points="17,44 0,0 34,0" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2"/>
+                </svg>
               </div>
             </div>
           </div>
@@ -785,7 +914,7 @@ export default function UserWheelPage({
 
       {/* ── WIN MODAL ── */}
       {showWinModal && (
-        <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.85)', backdropFilter:'blur(12px)', padding:'20px' }}>
+        <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'flex-end', justifyContent:'center', background:'rgba(0,0,0,0.3)', padding:'20px', paddingBottom:'8vh' }}>
           <div className="modal-in" style={{
             background:'#1f160a',
             border:'1px solid rgba(212,175,55,0.35)',
