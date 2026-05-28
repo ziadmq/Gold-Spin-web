@@ -34,6 +34,7 @@ export default function UserWheelPage({
   onLogout,
   onRecordWin,
   userDisplayName = 'عضو مميز',
+  userEmail,
 }: UserWheelPageProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -638,7 +639,9 @@ export default function UserWheelPage({
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
             <div style={{ textAlign:'right', lineHeight:1.4 }}>
-              <div style={{ fontSize:'0.6rem', fontWeight:700, textTransform:'uppercase', color:'rgba(212,175,55,0.5)', letterSpacing:'0.1em' }}>الموظف</div>
+              <div style={{ fontSize:'0.6rem', fontWeight:700, textTransform:'uppercase', color:'rgba(212,175,55,0.5)', letterSpacing:'0.1em' }}>
+                {(userEmail === 'sbeihmorad07@gmail.com' || userEmail === 'kafehazyad5@gmail.com') ? 'MANAGER' : 'الموظف'}
+              </div>
               <div style={{ fontSize:'0.88rem', fontWeight:800, color:'#fde8a0' }}>{userDisplayName}</div>
             </div>
             <div style={{ width:'1px', height:'32px', background:'rgba(212,175,55,0.2)' }}/>
