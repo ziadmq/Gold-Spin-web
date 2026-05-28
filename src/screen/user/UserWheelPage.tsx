@@ -389,17 +389,10 @@ export default function UserWheelPage({
     setWinningPrize(prize);
 
     const deg = 360 / activePrizes.length;
-    // Segment i starts at i*deg (from 3 o'clock / 0°), center is at i*deg + deg/2
-    // The pointer starts at top (which is 270° in canvas coords, or -90°)
-    // To reach segment center: pointer needs to rotate from its start to the segment center
-    // segmentCenterAngle (from 3 o'clock) = idx * deg + deg / 2
-    // pointerStart (from 3 o'clock) = 270
-    // rotation needed = segmentCenterAngle - pointerStart (mod 360) but we go clockwise
-    const segmentCenter = idx * deg + deg / 2;
-    // How far clockwise from pointer's start (top=270°) to segment center
-    const targetAngle = (segmentCenter - 270 + 360) % 360;
+    const mid = idx * deg + deg / 2;
+    const offset = (270 - mid + 360) % 360;
     const spins = 360 * (7 + Math.floor(Math.random() * 5));
-    setCurrentRotation(prev => prev + spins + targetAngle - (prev % 360));
+    setCurrentRotation(prev => prev + spins + offset - (prev % 360));
 
     setTimeout(() => {
       stopSpinSound();
@@ -701,6 +694,22 @@ export default function UserWheelPage({
         {/* ── WHEEL ── */}
         <div style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center' }}>
 
+          {/* SVG Pointer - Static at the top */}
+          <div ref={pointerRef} style={{ position:'absolute', top:'-24px', left:'50%', transform:'translateX(-50%)', zIndex:40, filter:'drop-shadow(0 8px 16px rgba(212,175,55,0.9))', transition:'transform 0.05s ease-out', transformOrigin:'50% 100%' }}>
+            <svg width="34" height="44" viewBox="0 0 34 44" fill="none">
+              <defs>
+                <linearGradient id="pgrd" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor="#fff8e1"/>
+                  <stop offset="35%"  stopColor="#fde8a0"/>
+                  <stop offset="70%"  stopColor="#d4af37"/>
+                  <stop offset="100%" stopColor="#7a5c1a"/>
+                </linearGradient>
+              </defs>
+              <polygon points="17,44 0,0 34,0" fill="url(#pgrd)"/>
+              <polygon points="17,44 0,0 34,0" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2"/>
+            </svg>
+          </div>
+
           {/* Outer glow rings */}
           <div style={{ position:'relative', display:'inline-flex', alignItems:'center', justifyContent:'center' }}>
 
@@ -720,8 +729,12 @@ export default function UserWheelPage({
                     boxShadow:'inset 0 0 50px rgba(0,0,0,0.4)',
                   }}
                 >
-                  {/* Canvas - STATIC, no rotation */}
-                  <div style={{ width:'100%', height:'100%' }}>
+                  {/* Canvas - Rotating Wheel */}
+                  <div style={{
+                    width:'100%', height:'100%',
+                    transform:`rotate(${currentRotation}deg)`,
+                    transition: isSpinning?`transform ${spinDuration}s cubic-bezier(0.12,0,0.08,1)`:'none',
+                  }}>
                     <canvas ref={canvasRef} width={500} height={500} style={{ width:'100%', height:'100%', display:'block' }}/>
                   </div>
 
@@ -752,41 +765,6 @@ export default function UserWheelPage({
                     </button>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Rotating Pointer Overlay - spins around the wheel */}
-            <div
-              ref={pointerRef}
-              style={{
-                position:'absolute',
-                inset: 0,
-                zIndex: 40,
-                pointerEvents:'none',
-                transform:`rotate(${currentRotation}deg)`,
-                transition: isSpinning ? `transform ${spinDuration}s cubic-bezier(0.12,0,0.08,1)` : 'none',
-              }}
-            >
-              {/* Pointer at the top */}
-              <div style={{
-                position:'absolute',
-                top:'-20px',
-                left:'50%',
-                transform:'translateX(-50%)',
-                filter:'drop-shadow(0 8px 16px rgba(212,175,55,0.9))',
-              }}>
-                <svg width="34" height="44" viewBox="0 0 34 44" fill="none">
-                  <defs>
-                    <linearGradient id="pgrd" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor="#fff8e1"/>
-                      <stop offset="35%"  stopColor="#fde8a0"/>
-                      <stop offset="70%"  stopColor="#d4af37"/>
-                      <stop offset="100%" stopColor="#7a5c1a"/>
-                    </linearGradient>
-                  </defs>
-                  <polygon points="17,44 0,0 34,0" fill="url(#pgrd)"/>
-                  <polygon points="17,44 0,0 34,0" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2"/>
-                </svg>
               </div>
             </div>
           </div>
