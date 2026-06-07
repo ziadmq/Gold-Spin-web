@@ -17,16 +17,16 @@ interface UserWheelPageProps {
   userEmail?: string;
 }
 
-// Professional deep palette — all white text for clarity
+// Vibrant premium jewel-tone palette — all white text
 const SLICE_COLORS = [
-  { bg: '#B8860B', bgLight: '#D4A017', bgDark: '#9C7209', text: '#ffffff', dot: '#ffffff' }, // Dark Gold
-  { bg: '#C0392B', bgLight: '#D94432', bgDark: '#A93226', text: '#ffffff', dot: '#fff8e1' }, // Rich Red
-  { bg: '#8B6914', bgLight: '#A07818', bgDark: '#745A10', text: '#ffffff', dot: '#ffffff' }, // Bronze
-  { bg: '#D35400', bgLight: '#E86C10', bgDark: '#B84800', text: '#ffffff', dot: '#fff8e1' }, // Burnt Orange
-  { bg: '#AF8C2E', bgLight: '#C8A038', bgDark: '#947624', text: '#ffffff', dot: '#ffffff' }, // Antique Gold
-  { bg: '#922B21', bgLight: '#A83828', bgDark: '#7B241C', text: '#ffffff', dot: '#fff8e1' }, // Deep Crimson
-  { bg: '#9A7D0A', bgLight: '#B8940E', bgDark: '#806808', text: '#ffffff', dot: '#ffffff' }, // Old Gold
-  { bg: '#BA4A00', bgLight: '#D45A10', bgDark: '#A04000', text: '#ffffff', dot: '#fff8e1' }, // Copper
+  { bg: '#2D6A4F', bgLight: '#40916C', bgDark: '#1B4332', text: '#ffffff', dot: '#ffffff' }, // Emerald Green
+  { bg: '#E63946', bgLight: '#F05060', bgDark: '#C62B38', text: '#ffffff', dot: '#fff8e1' }, // Ruby Red
+  { bg: '#457B9D', bgLight: '#5A93B5', bgDark: '#356585', text: '#ffffff', dot: '#ffffff' }, // Ocean Blue
+  { bg: '#F4A261', bgLight: '#F7B87A', bgDark: '#E08840', text: '#ffffff', dot: '#fff8e1' }, // Sunset Orange
+  { bg: '#6A4C93', bgLight: '#8060B0', bgDark: '#553A78', text: '#ffffff', dot: '#ffffff' }, // Royal Purple
+  { bg: '#E76F51', bgLight: '#F08868', bgDark: '#D05A3C', text: '#ffffff', dot: '#fff8e1' }, // Coral
+  { bg: '#264653', bgLight: '#355A68', bgDark: '#1A3440', text: '#ffffff', dot: '#ffffff' }, // Deep Teal
+  { bg: '#E9C46A', bgLight: '#F0D080', bgDark: '#D4AE50', text: '#ffffff', dot: '#fff8e1' }, // Golden Honey
 ];
 
 export default function UserWheelPage({
@@ -56,48 +56,57 @@ export default function UserWheelPage({
       const ctx = getAudioCtx();
       const t = ctx.currentTime;
 
-      // Sharp click noise burst
-      const bufSize = ctx.sampleRate * 0.03;
+      // Loud punchy tick sound
+      const bufSize = ctx.sampleRate * 0.05;
       const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
       const data = buf.getChannelData(0);
       for (let i = 0; i < bufSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize, 10);
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize, 6);
       }
       const noise = ctx.createBufferSource();
       noise.buffer = buf;
 
-      // Bandpass to make it sound like a peg click
+      // Bandpass for clicky peg sound
       const bp = ctx.createBiquadFilter();
       bp.type = 'bandpass';
       bp.frequency.value = pitch;
-      bp.Q.value = 5;
+      bp.Q.value = 3;
 
       const gain = ctx.createGain();
       gain.gain.setValueAtTime(volume, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+
+      // Add a tonal click for more presence
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = pitch * 0.5;
+      const oscGain = ctx.createGain();
+      oscGain.gain.setValueAtTime(volume * 0.4, t);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+      osc.connect(oscGain);
+      oscGain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.04);
 
       noise.connect(bp);
       bp.connect(gain);
       gain.connect(ctx.destination);
       noise.start(t);
-      noise.stop(t + 0.04);
+      noise.stop(t + 0.06);
     } catch (e) { /* ignore */ }
   };
 
   const startSpinSound = (durationSec: number, segmentCount: number) => {
-    const totalClicks = segmentCount * 8; // multiple rotations worth of clicks
+    const totalClicks = segmentCount * 10;
     let click = 0;
     const schedule = () => {
       if (click >= totalClicks) return;
       const progress = click / totalClicks;
-      // Interval: starts very fast (~30ms) and slows to (~250ms) using easing curve
       const ease = progress * progress * progress;
-      const interval = 30 + ease * 280;
-      // Pitch varies slightly for realism
-      const pitch = 2800 + (Math.random() - 0.5) * 600;
-      // Volume fades slightly toward the end
-      const vol = 0.5 - progress * 0.25;
-      playClick(Math.max(vol, 0.08), pitch);
+      const interval = 25 + ease * 320;
+      const pitch = 3200 + (Math.random() - 0.5) * 800;
+      const vol = 0.8 - progress * 0.35;
+      playClick(Math.max(vol, 0.15), pitch);
       click++;
       spinSoundRef.current = window.setTimeout(schedule, interval);
     };
@@ -115,34 +124,62 @@ export default function UserWheelPage({
     try {
       const ctx = getAudioCtx();
       const t = ctx.currentTime;
-      // Triumphant arpeggio
-      const notes = [440, 554, 659, 880, 1109, 1319];
+
+      // Fanfare: ascending triumphant notes
+      const notes = [523, 659, 784, 1047, 1319, 1568];
       notes.forEach((freq, i) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.value = freq;
-        const start = t + i * 0.08;
+        const start = t + i * 0.1;
         gain.gain.setValueAtTime(0, start);
-        gain.gain.linearRampToValueAtTime(0.25, start + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.5);
+        gain.gain.linearRampToValueAtTime(0.4, start + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.7);
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start(start);
-        osc.stop(start + 0.5);
+        osc.stop(start + 0.7);
       });
-      // Sparkle shimmer
+
+      // Bright bell tone
+      const bell = ctx.createOscillator();
+      const bellGain = ctx.createGain();
+      bell.type = 'sine';
+      bell.frequency.value = 1568;
+      bellGain.gain.setValueAtTime(0.35, t + 0.6);
+      bellGain.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
+      bell.connect(bellGain);
+      bellGain.connect(ctx.destination);
+      bell.start(t + 0.6);
+      bell.stop(t + 2.0);
+
+      // Sparkle shimmer sweep
       const shimmer = ctx.createOscillator();
       const sGain = ctx.createGain();
       shimmer.type = 'sine';
-      shimmer.frequency.setValueAtTime(2000, t + 0.5);
-      shimmer.frequency.exponentialRampToValueAtTime(4000, t + 1.2);
-      sGain.gain.setValueAtTime(0.08, t + 0.5);
-      sGain.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+      shimmer.frequency.setValueAtTime(2500, t + 0.7);
+      shimmer.frequency.exponentialRampToValueAtTime(5000, t + 1.5);
+      sGain.gain.setValueAtTime(0.12, t + 0.7);
+      sGain.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
       shimmer.connect(sGain);
       sGain.connect(ctx.destination);
-      shimmer.start(t + 0.5);
-      shimmer.stop(t + 1.2);
+      shimmer.start(t + 0.7);
+      shimmer.stop(t + 1.5);
+
+      // Victory chord
+      [1047, 1319, 1568].forEach(freq => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'triangle';
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.2, t + 0.8);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 2.2);
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start(t + 0.8);
+        o.stop(t + 2.2);
+      });
     } catch (e) { /* ignore */ }
   };
 
