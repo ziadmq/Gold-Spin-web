@@ -17,16 +17,16 @@ interface UserWheelPageProps {
   userEmail?: string;
 }
 
-// Black & Gold alternating palette
+// Professional deep palette — all white text for clarity
 const SLICE_COLORS = [
-  { bg: '#0d0900', bgLight: '#1e1500', bgDark: '#050400', text: '#d4af37', dot: '#d4af37' }, // Black
-  { bg: '#c9a84c', bgLight: '#f0d070', bgDark: '#8a6820', text: '#0d0900', dot: '#0d0900' }, // Gold
-  { bg: '#0d0900', bgLight: '#1e1500', bgDark: '#050400', text: '#d4af37', dot: '#d4af37' }, // Black
-  { bg: '#c9a84c', bgLight: '#f0d070', bgDark: '#8a6820', text: '#0d0900', dot: '#0d0900' }, // Gold
-  { bg: '#0d0900', bgLight: '#1e1500', bgDark: '#050400', text: '#d4af37', dot: '#d4af37' }, // Black
-  { bg: '#c9a84c', bgLight: '#f0d070', bgDark: '#8a6820', text: '#0d0900', dot: '#0d0900' }, // Gold
-  { bg: '#0d0900', bgLight: '#1e1500', bgDark: '#050400', text: '#d4af37', dot: '#d4af37' }, // Black
-  { bg: '#c9a84c', bgLight: '#f0d070', bgDark: '#8a6820', text: '#0d0900', dot: '#0d0900' }, // Gold
+  { bg: '#B8860B', bgLight: '#D4A017', bgDark: '#9C7209', text: '#ffffff', dot: '#ffffff' }, // Dark Gold
+  { bg: '#C0392B', bgLight: '#D94432', bgDark: '#A93226', text: '#ffffff', dot: '#fff8e1' }, // Rich Red
+  { bg: '#8B6914', bgLight: '#A07818', bgDark: '#745A10', text: '#ffffff', dot: '#ffffff' }, // Bronze
+  { bg: '#D35400', bgLight: '#E86C10', bgDark: '#B84800', text: '#ffffff', dot: '#fff8e1' }, // Burnt Orange
+  { bg: '#AF8C2E', bgLight: '#C8A038', bgDark: '#947624', text: '#ffffff', dot: '#ffffff' }, // Antique Gold
+  { bg: '#922B21', bgLight: '#A83828', bgDark: '#7B241C', text: '#ffffff', dot: '#fff8e1' }, // Deep Crimson
+  { bg: '#9A7D0A', bgLight: '#B8940E', bgDark: '#806808', text: '#ffffff', dot: '#ffffff' }, // Old Gold
+  { bg: '#BA4A00', bgLight: '#D45A10', bgDark: '#A04000', text: '#ffffff', dot: '#fff8e1' }, // Copper
 ];
 
 export default function UserWheelPage({
@@ -243,27 +243,29 @@ export default function UserWheelPage({
       ctx.globalAlpha = 1;
       ctx.restore();
 
-      // Prize label
+      // Prize label — large and clear
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(midA);
-      ctx.textAlign = 'right';
+      ctx.textAlign = 'center';
 
-      const fontSize = n > 10 ? 11 : n > 6 ? 13 : 15;
-      ctx.font = `900 ${fontSize}px "Segoe UI", system-ui, sans-serif`;
+      const fontSize = n > 10 ? 20 : n > 6 ? 26 : 30;
+      ctx.font = `900 ${fontSize}px "Segoe UI", "Arial", system-ui, sans-serif`;
 
-      // Shadow: opposite of text color for contrast
-      ctx.shadowColor = isGold ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.8)';
-      ctx.shadowBlur = 6;
+      // Strong shadow for readability
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 4;
       ctx.shadowOffsetX = 1;
       ctx.shadowOffsetY = 1;
       ctx.fillStyle = p.text;
 
-      const maxChars = n > 8 ? 10 : 14;
+      const maxChars = n > 8 ? 12 : 16;
       const lbl = prize.label.length > maxChars
         ? prize.label.substring(0, maxChars - 1) + '…'
         : prize.label;
-      ctx.fillText(lbl, radius - 26, fontSize / 2);
+      // Position text in the middle of the slice radially
+      const textRadius = radius * 0.58;
+      ctx.fillText(lbl, textRadius, fontSize / 3);
       ctx.shadowBlur = 0;
       ctx.restore();
     });
@@ -310,43 +312,26 @@ export default function UserWheelPage({
       ctx.restore();
     }
 
-    // Center hub — gold gradient
+    // Small center hub — clean golden dot (no clock)
     ctx.save();
     ctx.beginPath();
-    ctx.arc(cx, cy, 38, 0, Math.PI * 2);
-    ctx.fillStyle = '#1e1810';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur = 20;
-    ctx.fill();
-    ctx.restore();
-
-    const hubGrad = ctx.createRadialGradient(cx - 7, cy - 7, 0, cx, cy, 34);
+    ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+    const hubGrad = ctx.createRadialGradient(cx - 4, cy - 4, 0, cx, cy, 22);
     hubGrad.addColorStop(0,   '#fff8e1');
-    hubGrad.addColorStop(0.25, '#fde8a0');
-    hubGrad.addColorStop(0.6, '#d4af37');
+    hubGrad.addColorStop(0.3, '#fde8a0');
+    hubGrad.addColorStop(0.7, '#d4af37');
     hubGrad.addColorStop(1,   '#7a5c1a');
-    ctx.beginPath();
-    ctx.arc(cx, cy, 34, 0, Math.PI * 2);
     ctx.fillStyle = hubGrad;
-    ctx.shadowColor = 'rgba(212,175,55,1)';
-    ctx.shadowBlur = 30;
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 15;
     ctx.fill();
     ctx.shadowBlur = 0;
+    ctx.restore();
 
     ctx.beginPath();
-    ctx.arc(cx, cy, 34, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
     ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(cx, cy, 12, 0, Math.PI * 2);
-    ctx.fillStyle = '#1e1810';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(cx, cy, 12, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(212,175,55,0.6)';
-    ctx.lineWidth = 1.5;
     ctx.stroke();
   };
 
@@ -427,7 +412,7 @@ export default function UserWheelPage({
     if (isSpinning) return;
     setCurrentRotation(0); setShowWinModal(false); setWinningPrize(null);
     setWinningValueAssumed(0); setConfetti([]);
-    setCustomerName(''); setCustomerPhone(''); setCustomerAddress(''); setCustomerPrice('');
+    setCustomerName(''); setCustomerPhone(''); setCustomerPrice('');
   };
 
   // ─── BG: warm deep amber, visible & readable ───
@@ -781,7 +766,7 @@ export default function UserWheelPage({
                   <Sparkles size={15} style={{ color:'#d4af37' }}/>
                 </div>
               : <span style={{ color:'rgba(212,175,55,0.65)', fontSize:'0.82rem', fontWeight:600 }}>
-                  أدخل بيانات العميل واضغط على زر السحب في المنتصف 🎰
+                  أدخل بيانات العميل واضغط على زر السحب 🎰
                 </span>
             }
           </div>
@@ -886,6 +871,8 @@ export default function UserWheelPage({
                   ⚠️ {customerError}
                 </div>
               )}
+
+
 
             </form>
           </div>
